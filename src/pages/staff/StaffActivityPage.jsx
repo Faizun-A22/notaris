@@ -1,116 +1,101 @@
-import React, { useState, useMemo } from 'react';
-import { useCases } from '../../hooks/useCases';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { mockActivities } from '../../data/mockActivities';
+import { supabase } from '../../lib/supabase';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { formatDate } from '../../utils/formatDate';
-import { SERVICE_TYPES, SERVICE_CATEGORIES, getCaseCategory } from '../../constants/serviceTypes';
-
-const ACTIVITY_ICONS = {
-  upload_file: 'upload_file',
-  draw: 'draw',
-  fact_check: 'fact_check',
-  check_circle: 'check_circle',
-  add_circle: 'add_circle',
-  edit: 'edit',
-  delete: 'delete',
-};
-
-const ACTION_TYPES = ['Semua', 'Upload', 'Tanda Tangan', 'Verifikasi', 'Selesai'];
-
-// Generate rich activity log from cases + mock
-function buildActivityLog(cases, mockActs) {
-  const fromCases = cases.map((c, i) => {
-    const category = getCaseCategory(c);
-    
-    // Map case status to action type dynamically
-    let actionType = 'Verifikasi';
-    let icon = 'fact_check';
-    
-    if (c.isComplete || c.status === 'Selesai') {
-      actionType = 'Selesai';
-      icon = 'check_circle';
-    } else if (c.status === 'Tanda Tangan Akta') {
-      actionType = 'Tanda Tangan';
-      icon = 'draw';
-    }
-    
-    return {
-      id: `case-act-${c.id}`,
-      user: c.assignedStaff,
-      role: 'Staf Administrasi',
-      action: c.isComplete
-        ? 'Menyelesaikan berkas akta'
-        : `Memperbarui status ke "${c.status}"`,
-      target: `${c.clientName} (${c.caseNumber})`,
-      timestamp: formatDate(c.estimationDate),
-      icon,
-      type: actionType,
-      category,
-      serviceType: c.serviceType,
-      caseRef: c,
-    };
-  });
-
-  const fromMock = mockActs.map((a) => {
-    let serviceType = null;
-    const match = a.target.match(/\(([^)]+)\)/);
-    if (match) {
-      const extracted = match[1];
-      if (extracted === 'Pendirian PT') serviceType = 'PT';
-      else if (extracted === 'Waarmerking') serviceType = 'WAARMERKING';
-      else if (extracted === 'Hibah') serviceType = 'HIBAH';
-      else if (extracted === 'Wasiat') serviceType = 'WASIAT';
-      else serviceType = extracted.toUpperCase();
-    }
-
-    // Map mock icons to action type accurately
-    let actionType = 'Verifikasi';
-    if (a.icon === 'upload_file' || a.icon === 'cloud_upload') {
-      actionType = 'Upload';
-    } else if (a.icon === 'draw') {
-      actionType = 'Tanda Tangan';
-    } else if (a.icon === 'check_circle') {
-      actionType = 'Selesai';
-    }
-
-    return {
-      ...a,
-      category: a.category ? a.category.toUpperCase() : 'PPAT',
-      serviceType,
-      type: actionType,
-      caseRef: null,
-    };
-  });
-
-  return [...fromMock, ...fromCases];
-}
+import { SERVICE_TYPES } from '../../constants/serviceTypes';
 
 export const StaffActivityPage = () => {
-  const { cases } = useCases();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
-  // Filter states
+  // Database logs state
+  const [logs, setLogs] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Filter states (for Staff view)
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Semua');
   const [filterService, setFilterService] = useState('Semua');
   const [filterType, setFilterType] = useState('Semua');
 
-  const allActivities = useMemo(() => buildActivityLog(cases, mockActivities), [cases]);
+  // Selected staff for Owner detail modal
+  const [selectedStaff, setSelectedStaff] = useState(null);
 
-  // Dynamic service list based on selected category
-  const serviceOptions = useMemo(() => {
-    if (filterCategory === 'Semua') return [];
-    return Object.values(SERVICE_TYPES).filter((s) => s.category === filterCategory);
-  }, [filterCategory]);
+  const fetchLogsAndStaff = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch all activity logs from DB
+      const { data: logsData, error: logsError } = await supabase
+        .from('activity_logs')
+        .select('*, cases(case_number, client_name, service_type)')
+        .order('created_at', { ascending: false });
 
-  const handleCategoryChange = (cat) => {
-    setFilterCategory(cat);
-    setFilterService('Semua');
+      if (logsError) throw logsError;
+
+      const mappedLogs = (logsData || []).map(act => {
+        // Map icon to type
+        let actionType = 'Verifikasi';
+        if (act.icon === 'upload_file' || act.icon === 'cloud_upload') {
+          actionType = 'Upload';
+        } else if (act.icon === 'draw') {
+          actionType = 'Tanda Tangan';
+        } else if (act.icon === 'check_circle') {
+          actionType = 'Selesai';
+        }
+
+        return {
+          id: act.id,
+          user: act.user_name || 'Sistem',
+          user_id: act.user_id,
+          role: act.user_role === 'staff' ? 'Staf Administrasi' : 'Ketua Notaris',
+          category: act.category ? act.category.toUpperCase() : 'PPAT',
+          action: act.action,
+          target: act.cases ? `${act.cases.client_name} (${act.cases.case_number})` : 'Sistem',
+          timestamp: new Date(act.created_at).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }),
+          rawDate: new Date(act.created_at),
+          icon: act.icon || 'history',
+          type: actionType,
+          serviceType: act.cases?.service_type || 'SKMHT'
+        };
+      });
+
+      setLogs(mappedLogs);
+
+      // 2. Fetch all staff members if current user is owner
+      if (profile?.role === 'owner') {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'staff');
+
+        if (profilesError) throw profilesError;
+        setStaffList(profilesData || []);
+      }
+    } catch (err) {
+      console.error('Error fetching logs:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filtered = useMemo(() => {
-    return allActivities.filter((a) => {
+  useEffect(() => {
+    if (user && profile) {
+      fetchLogsAndStaff();
+    }
+  }, [user, profile]);
+
+  // Filter logs for logged in staff (self-only)
+  const myLogs = useMemo(() => {
+    if (profile?.role === 'staff') {
+      return logs.filter(l => l.user_id === user?.id);
+    }
+    return logs;
+  }, [logs, user, profile]);
+
+  // Apply filters to Staff view logs
+  const filteredMyLogs = useMemo(() => {
+    return myLogs.filter((a) => {
       const matchType = filterType === 'Semua' || a.type === filterType;
       const matchCategory = filterCategory === 'Semua' || a.category === filterCategory;
       const matchService = filterService === 'Semua' || a.serviceType === filterService;
@@ -122,205 +107,270 @@ export const StaffActivityPage = () => {
         
       return matchType && matchCategory && matchService && matchSearch;
     });
-  }, [allActivities, filterType, filterCategory, filterService, search]);
+  }, [myLogs, filterType, filterCategory, filterService, search]);
 
-  // Stats
-  const totalActions = allActivities.length;
-  const completedActions = allActivities.filter((a) => a.type === 'Selesai').length;
-  const uploadActions = allActivities.filter((a) => a.type === 'Upload').length;
-  const todayActions = mockActivities.length; // mock recent
+  // Group logs by staff for Owner view
+  const staffCardsData = useMemo(() => {
+    if (profile?.role !== 'owner') return [];
+    return staffList.map(st => {
+      const staffLogs = logs.filter(l => l.user_id === st.id);
+      const lastActiveLog = staffLogs[0] || null;
 
+      return {
+        id: st.id,
+        name: st.full_name,
+        title: st.title || 'Staf Administrasi',
+        avatarUrl: st.avatar_url,
+        totalActivities: staffLogs.length,
+        lastActive: lastActiveLog 
+          ? `${lastActiveLog.action} pada berkas ${lastActiveLog.target} (${lastActiveLog.timestamp})` 
+          : 'Belum ada aktivitas terekam.',
+        logs: staffLogs
+      };
+    });
+  }, [staffList, logs, profile]);
+
+  // Calculate statistics for staff view
+  const myStats = useMemo(() => {
+    return {
+      total: myLogs.length,
+      completed: myLogs.filter(l => l.type === 'Selesai').length,
+      upload: myLogs.filter(l => l.type === 'Upload').length
+    };
+  }, [myLogs]);
+
+  // Avatar initials helper
+  const getInitials = (name) => {
+    if (!name) return 'ST';
+    return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
+  };
+
+  // Render Owner View (Card-based)
+  if (profile?.role === 'owner') {
+    return (
+      <div className="space-y-stack-lg text-left font-sans animate-fade-in">
+        <div className="flex justify-between items-end mb-6">
+          <div>
+            <h2 className="font-headline-lg text-headline-lg text-on-surface font-extrabold text-[26px]">Aktivitas Kerja Staf</h2>
+            <p className="text-body-lg text-on-surface-variant mt-1 text-[13px]">Pantau ringkasan dan riwayat seluruh aktivitas operasional staf secara real-time.</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <span className="material-symbols-outlined animate-spin text-primary text-[32px]">sync</span>
+            <span className="ml-2 text-on-surface-variant font-medium">Memuat riwayat aktivitas...</span>
+          </div>
+        ) : staffCardsData.length === 0 ? (
+          <div className="text-center py-12 bg-surface-container-lowest border border-outline-variant rounded-xl p-8 card-shadow">
+            <span className="material-symbols-outlined text-[48px] text-on-surface-variant mb-2">history</span>
+            <p className="text-on-surface-variant font-bold">Belum ada staf terdaftar atau aktivitas terekam.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter-grid">
+            {staffCardsData.map((st) => (
+              <div 
+                key={st.id}
+                onClick={() => setSelectedStaff(st)}
+                className="bg-surface-container-lowest border border-outline-variant p-6 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between group"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-[16px] overflow-hidden">
+                      {st.avatarUrl ? (
+                        <img src={st.avatarUrl} alt={st.name} className="w-full h-full object-cover" />
+                      ) : (
+                        getInitials(st.name)
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-on-surface text-[15px] group-hover:text-primary transition-colors">{st.name}</h4>
+                      <p className="text-[12px] text-on-surface-variant font-medium">{st.title}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-surface-container-low p-3 rounded-lg flex justify-between items-center text-[12px]">
+                    <span className="text-on-surface-variant font-medium">Total Aktivitas</span>
+                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">{st.totalActivities} Tindakan</span>
+                  </div>
+
+                  <div className="text-[11.5px] leading-relaxed text-on-surface-variant">
+                    <span className="font-bold text-[10px] uppercase tracking-wider text-primary block mb-1">Terakhir Aktif</span>
+                    <p className="line-clamp-2 italic">"{st.lastActive}"</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-outline-variant flex justify-between items-center text-primary font-bold text-[12px]">
+                  <span>Lihat Selengkapnya</span>
+                  <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Modal Detail Aktivitas Staf */}
+        {selectedStaff && (
+          <div className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-xl w-full max-w-lg p-6 relative shadow-xl text-left animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+              <button 
+                type="button"
+                onClick={() => setSelectedStaff(null)}
+                className="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface transition-colors"
+              >
+                <span className="material-symbols-outlined text-[24px]">close</span>
+              </button>
+
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-outline-variant">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold overflow-hidden">
+                  {selectedStaff.avatarUrl ? (
+                    <img src={selectedStaff.avatarUrl} alt={selectedStaff.name} className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(selectedStaff.name)
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-bold text-on-surface text-[17px]">{selectedStaff.name}</h3>
+                  <p className="text-[12px] text-primary font-semibold">{selectedStaff.title}</p>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
+                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Seluruh Riwayat Aktivitas</p>
+                
+                {selectedStaff.logs.length === 0 ? (
+                  <p className="text-[13px] text-on-surface-variant italic text-center py-8">Belum ada aktivitas terekam dari staf ini.</p>
+                ) : (
+                  <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-outline-variant">
+                    {selectedStaff.logs.map((act) => (
+                      <div key={act.id} className="relative">
+                        <div className="absolute -left-[22px] top-1.5 w-3.5 h-3.5 bg-primary rounded-full border-2 border-white"></div>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-body-md text-on-surface font-bold text-[13px]">
+                              {act.action}
+                            </p>
+                            <p className="text-[11px] text-primary font-semibold mt-0.5">
+                              {act.target}
+                            </p>
+                            <p className="text-[10px] text-on-surface-variant mt-1">
+                              {act.timestamp}
+                            </p>
+                          </div>
+                          <div className="p-1.5 bg-surface-container-high rounded text-on-surface-variant">
+                            <span className="material-symbols-outlined text-[16px]">{act.icon}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Render Staff View (Table & Timeline for self-only)
   return (
-    <div className="space-y-stack-lg text-left">
-      {/* Header */}
-      <div>
-        <h2 className="font-headline-lg text-headline-lg text-on-surface font-extrabold">Log Aktivitas</h2>
-        <p className="text-body-lg text-on-surface-variant mt-1">
-          Rekam jejak seluruh tindakan yang dilakukan dalam sistem manajemen berkas.
-        </p>
+    <div className="space-y-stack-lg text-left font-sans animate-fade-in">
+      <div className="flex justify-between items-end mb-6">
+        <div>
+          <h2 className="font-headline-lg text-headline-lg text-on-surface font-extrabold text-[26px]">Aktivitas Kerja Saya</h2>
+          <p className="text-body-lg text-on-surface-variant mt-1 text-[13px]">Tinjau seluruh riwayat pengerjaan dokumen yang Anda lakukan.</p>
+        </div>
       </div>
 
-      {/* Stats Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-gutter-grid">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Total Aktivitas', value: totalActions, icon: 'history', color: 'text-primary', bg: 'bg-primary/10' },
-          { label: 'Hari Ini', value: todayActions, icon: 'today', color: 'text-secondary', bg: 'bg-secondary/10' },
-          { label: 'Upload Dokumen', value: uploadActions, icon: 'upload_file', color: 'text-tertiary', bg: 'bg-tertiary/10' },
-          { label: 'Berkas Selesai', value: completedActions, icon: 'check_circle', color: 'text-secondary', bg: 'bg-secondary/10' },
-        ].map(({ label, value, icon, color, bg }) => (
-          <div key={label} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex items-center gap-3">
-            <div className={`w-10 h-10 ${bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-              <span className={`material-symbols-outlined ${color} text-[20px]`}>{icon}</span>
+          { label: 'Total Tindakan', value: myStats.total, icon: 'history', color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Penyelesaian Akta', value: myStats.completed, icon: 'check_circle', color: 'text-secondary', bg: 'bg-secondary/10' },
+          { label: 'Unggah Berkas', value: myStats.upload, icon: 'upload_file', color: 'text-tertiary', bg: 'bg-tertiary/10' },
+        ].map((card) => (
+          <div key={card.label} className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl flex items-center gap-4 shadow-sm">
+            <div className={`w-10 h-10 ${card.bg} rounded-lg flex items-center justify-center`}>
+              <span className={`material-symbols-outlined ${card.color} text-[22px]`}>{card.icon}</span>
             </div>
             <div>
-              <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{label}</p>
-              <p className={`font-extrabold text-[20px] mt-0.5 ${color}`}>{value}</p>
+              <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{card.label}</p>
+              <p className={`font-extrabold text-[20px] mt-0.5 ${card.color}`}>{card.value}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Filters Container */}
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 space-y-4">
-        {/* Row 1: Search, Reset, Count */}
-        <div className="flex flex-wrap gap-3 items-center">
-          {/* Search Input */}
-          <div className="relative flex-1 min-w-[280px]">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari aktivitas, staf, atau berkas..."
-              className="w-full pl-9 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-[13px] focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-
-          {(search || filterCategory !== 'Semua' || filterService !== 'Semua' || filterType !== 'Semua') && (
-            <button
-              onClick={() => {
-                setSearch('');
-                setFilterCategory('Semua');
-                setFilterService('Semua');
-                setFilterType('Semua');
-              }}
-              className="py-2.5 px-4 text-error border border-error/20 rounded-lg text-[12px] font-bold hover:bg-error/5 transition-colors flex items-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-[16px]">filter_alt_off</span>
-              Reset Filter
-            </button>
-          )}
-
-          <span className="ml-auto text-[12px] text-on-surface-variant font-bold uppercase tracking-wider bg-surface-container px-3 py-1.5 rounded-lg select-none">
-            {filtered.length} Aktivitas
-          </span>
+      {/* Search and Filters */}
+      <div className="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl flex flex-wrap gap-3 items-center justify-between shadow-sm">
+        <div className="relative flex-1 min-w-[240px]">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari aktivitas atau nama berkas..."
+            className="w-full pl-9 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-[13px] focus:ring-primary focus:border-primary"
+          />
         </div>
 
-        {/* Row 2: Category, Service, and Action Type Controls */}
-        <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-outline-variant/30">
-          {/* Category Dropdown */}
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Kategori:</span>
-            <select
-              value={filterCategory}
-              onChange={(e) => handleCategoryChange(e.target.value)}
-              className="py-2 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-[12px] font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary text-on-surface-variant"
-            >
-              <option value="Semua">Semua Kategori</option>
-              <option value={SERVICE_CATEGORIES.PPAT}>PPAT</option>
-              <option value={SERVICE_CATEGORIES.NOTARIS}>NOTARIS</option>
-            </select>
-          </div>
-
-          {/* Dynamic Service Dropdown */}
-          {filterCategory !== 'Semua' && (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
-              <span className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Layanan:</span>
-              <select
-                value={filterService}
-                onChange={(e) => setFilterService(e.target.value)}
-                className="py-2 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-[12px] font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary text-on-surface-variant max-w-[200px]"
-              >
-                <option value="Semua">Semua Layanan</option>
-                {serviceOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Action Chips */}
-          <div className="flex items-center gap-2 md:ml-4">
-            <span className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Aksi:</span>
-            <div className="flex flex-wrap gap-1.5">
-              {ACTION_TYPES.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setFilterType(t)}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all border ${
-                    filterType === t
-                      ? 'bg-inverse-surface text-inverse-on-surface border-inverse-surface'
-                      : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          {/* Action Type */}
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[12px] font-bold text-on-surface-variant"
+          >
+            <option value="Semua">Semua Tipe</option>
+            <option value="Upload">Upload File</option>
+            <option value="Tanda Tangan">Tanda Tangan</option>
+            <option value="Verifikasi">Verifikasi</option>
+            <option value="Selesai">Selesai</option>
+          </select>
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
-        {filtered.length === 0 ? (
-          <div className="py-16 text-center">
-            <span className="material-symbols-outlined text-[48px] text-on-surface-variant opacity-30 block mb-3">manage_search</span>
-            <p className="text-on-surface-variant text-[14px]">Tidak ada aktivitas yang ditemukan.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-outline-variant">
-            {filtered.map((act, idx) => {
-              const iconBg =
-                act.type === 'Selesai' ? 'bg-secondary-container text-on-secondary-container'
-                : act.type === 'Upload' ? 'bg-primary-container text-on-primary-container'
-                : act.type === 'Tanda Tangan' ? 'bg-tertiary-container text-on-tertiary-container'
-                : 'bg-surface-container-high text-on-surface-variant';
-
-              return (
-                <div
-                  key={act.id}
-                  className="flex items-start gap-4 px-6 py-5 hover:bg-surface-container-low transition-colors group"
-                >
-                  {/* Icon Column */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${iconBg}`}>
-                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                      {act.icon}
-                    </span>
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="font-bold text-on-surface text-[13px]">{act.user}</span>
-                      <span className="text-[10px] text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full font-semibold">
-                        {act.role}
-                      </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        act.type === 'Selesai' ? 'bg-secondary-container text-on-secondary-container'
-                        : act.type === 'Upload' ? 'bg-primary/10 text-primary'
-                        : act.type === 'Tanda Tangan' ? 'bg-tertiary/10 text-tertiary'
-                        : 'bg-surface-container text-on-surface-variant'
-                      }`}>
-                        {act.type}
-                      </span>
-                    </div>
-                    <p className="text-[13px] text-on-surface">
-                      {act.action}{' '}
-                      <span className="font-bold text-primary">— {act.target}</span>
+      {/* Timeline Layout */}
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <span className="material-symbols-outlined animate-spin text-primary text-[32px]">sync</span>
+          <span className="ml-2 text-on-surface-variant font-medium">Memuat riwayat aktivitas...</span>
+        </div>
+      ) : filteredMyLogs.length === 0 ? (
+        <div className="text-center py-12 bg-surface-container-lowest border border-outline-variant rounded-xl p-8 card-shadow">
+          <span className="material-symbols-outlined text-[48px] text-on-surface-variant mb-2">history</span>
+          <p className="text-on-surface-variant font-bold">Tidak ada aktivitas ditemukan.</p>
+        </div>
+      ) : (
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
+          <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-outline-variant">
+            {filteredMyLogs.map((act) => (
+              <div key={act.id} className="relative">
+                <div className="absolute -left-[22px] top-1.5 w-3.5 h-3.5 bg-primary rounded-full border-2 border-white"></div>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-body-md text-on-surface font-bold text-[13px] flex items-center gap-2">
+                      Anda
+                      <span className="font-normal text-on-surface-variant">{act.action}</span>
                     </p>
-                    {act.caseRef && (
-                      <div className="mt-2 flex gap-2 flex-wrap">
-                        <StatusBadge variant="status" label={act.caseRef.status} />
-                        <StatusBadge variant="document" label={act.caseRef.documentsReady ? 'LENGKAP' : 'BELUM'} />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Timestamp */}
-                  <div className="flex-shrink-0 text-right">
-                    <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">
+                    <p className="text-[11px] text-primary font-semibold mt-0.5">
+                      {act.target}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant mt-1">
                       {act.timestamp}
-                    </span>
+                    </p>
+                  </div>
+                  
+                  <div className="p-1.5 bg-surface-container-high rounded text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[16px]">{act.icon}</span>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

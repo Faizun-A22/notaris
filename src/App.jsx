@@ -46,6 +46,7 @@ function App() {
               <Route path="staff" element={<OwnerStaffManagement />} />
               <Route path="documents" element={<OwnerDocumentsPage />} />
               <Route path="clients" element={<OwnerClientsPage />} />
+              <Route path="activity" element={<StaffActivityPage />} />
               <Route path="settings" element={<StaffSettingsPage />} />
             </Route>
 

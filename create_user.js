@@ -2,24 +2,38 @@ import { createClient } from '@supabase/supabase-js';
 import readline from 'readline';
 import fs from 'fs';
 
-// Load environment variables from .env manually
+// Load environment variables dari .env
 let supabaseUrl = '';
-let supabaseAnonKey = '';
+let serviceRoleKey = '';
+let useAdmin = false;
 
 if (fs.existsSync('.env')) {
   const envContent = fs.readFileSync('.env', 'utf8');
   const urlMatch = envContent.match(/VITE_SUPABASE_URL\s*=\s*(.*)/);
-  const keyMatch = envContent.match(/VITE_SUPABASE_ANON_KEY\s*=\s*(.*)/);
+  const serviceKeyMatch = envContent.match(/SUPABASE_SERVICE_ROLE_KEY\s*=\s*(.*)/);
+  const anonKeyMatch = envContent.match(/VITE_SUPABASE_ANON_KEY\s*=\s*(.*)/);
+  
   if (urlMatch) supabaseUrl = urlMatch[1].trim();
-  if (keyMatch) supabaseAnonKey = keyMatch[1].trim();
+  if (serviceKeyMatch) {
+    serviceRoleKey = serviceKeyMatch[1].trim();
+    useAdmin = true;
+  } else if (anonKeyMatch) {
+    serviceRoleKey = anonKeyMatch[1].trim();
+    useAdmin = false;
+  }
 }
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Error: VITE_SUPABASE_URL atau VITE_SUPABASE_ANON_KEY tidak ditemukan di file .env');
+if (!supabaseUrl || !serviceRoleKey) {
+  console.error('Error: Kredensial tidak ditemukan di file .env');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, serviceRoleKey, useAdmin ? {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+} : {});
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -29,7 +43,7 @@ const rl = readline.createInterface({
 const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 async function main() {
-  console.log('=== PEMBUATAN USER BARU SUPABASE ===');
+  console.log(`=== PEMBUATAN USER BARU SUPABASE (${useAdmin ? 'ADMIN MODE' : 'ANON MODE'}) ===`);
   
   const email = await question('Masukkan Email: ');
   const password = await question('Masukkan Password (minimal 6 karakter): ');
@@ -42,19 +56,37 @@ async function main() {
 
   console.log('\nMemproses pendaftaran...');
   
-  // 1. Sign Up User di Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-  });
+  let user;
 
-  if (authError) {
-    console.error('Gagal mendaftarkan user di Supabase Auth:', authError.message);
-    rl.close();
-    return;
+  if (useAdmin) {
+    // Registrasi menggunakan Admin API (otomatis terkonfirmasi)
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true
+    });
+
+    if (authError) {
+      console.error('Gagal mendaftarkan user di Auth Admin:', authError.message);
+      rl.close();
+      return;
+    }
+    user = authData.user;
+  } else {
+    // Registrasi menggunakan Anon API
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError) {
+      console.error('Gagal mendaftarkan user di Supabase Auth:', authError.message);
+      rl.close();
+      return;
+    }
+    user = authData.user;
   }
 
-  const user = authData.user;
   if (!user) {
     console.error('Gagal mendapatkan data user setelah sign up.');
     rl.close();
@@ -67,17 +99,16 @@ async function main() {
   console.log('Membuat data profile di tabel public.profiles...');
   const { error: profileError } = await supabase
     .from('profiles')
-    .insert({
+    .upsert({
       id: user.id,
       full_name: fullName,
       role: role,
       is_active: true,
       title: role === 'owner' ? 'Notaris Utama' : 'Staf Administrasi'
-    });
+    }, { onConflict: 'id' });
 
   if (profileError) {
     console.error('Gagal membuat profile di database:', profileError.message);
-    console.log('Catatan: Anda mungkin perlu memasukkan data profile ini secara manual ke tabel public.profiles.');
   } else {
     console.log('Profile berhasil dibuat!');
     console.log('--------------------------------------------------');
@@ -86,7 +117,9 @@ async function main() {
     console.log(`Role: ${role}`);
     console.log(`Nama: ${fullName}`);
     console.log('--------------------------------------------------');
-    console.log('Catatan: Jika email confirmation aktif di Supabase Anda, silakan verifikasi email terlebih dahulu atau matikan opsi "Confirm email" di Dashboard Supabase -> Authentication -> Providers -> Email.');
+    if (!useAdmin) {
+      console.log('PENTING: Karena mendaftar dalam Anon Mode, harap konfirmasi email user ini manual di Dashboard Supabase jika login ditolak.');
+    }
   }
 
   rl.close();

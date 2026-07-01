@@ -38,7 +38,7 @@ export const StaffLayout = () => {
 
         {/* Scrollable Content Shell */}
         <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-          <div className="flex-1 w-full max-w-[1440px] mx-auto px-margin-page py-stack-lg animate-fade-in">
+          <div className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-margin-page py-4 sm:py-6 md:py-stack-lg animate-fade-in">
             <Outlet context={{ searchVal }} />
           </div>
 

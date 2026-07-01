@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useRedAlert } from '../../hooks/useRedAlert';
 
 export const TopBar = ({ searchVal, onSearchChange, title, onMenuClick }) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { hasAlerts, count, overdueCases } = useRedAlert();
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
@@ -93,14 +93,16 @@ export const TopBar = ({ searchVal, onSearchChange, title, onMenuClick }) => {
           )}
         </div>
 
-        {/* Green CTA "+ File Baru" Button */}
-        <button
-          onClick={() => navigate('/staff/buat-berkas')}
-          className="px-4 py-2 bg-primary text-white rounded-full font-bold text-[12px] hover:opacity-95 shadow-sm flex items-center gap-1.5 transition-all active:scale-[0.97] shrink-0"
-        >
-          <span className="material-symbols-outlined text-[16px] font-bold">add</span>
-          <span>File Baru</span>
-        </button>
+        {/* Green CTA "+ File Baru" Button (Only for Staff) */}
+        {profile?.role === 'staff' && (
+          <button
+            onClick={() => navigate('/staff/buat-berkas')}
+            className="px-4 py-2 bg-primary text-white rounded-full font-bold text-[12px] hover:opacity-95 shadow-sm flex items-center gap-1.5 transition-all active:scale-[0.97] shrink-0"
+          >
+            <span className="material-symbols-outlined text-[16px] font-bold">add</span>
+            <span>File Baru</span>
+          </button>
+        )}
 
       </div>
     </header>

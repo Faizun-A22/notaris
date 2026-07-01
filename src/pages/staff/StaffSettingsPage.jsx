@@ -1,13 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
-const SaveButton = ({ section, savedSection, onSave }) => (
+const SaveButton = ({ section, savedSection, onSave, loading }) => (
   <button
     onClick={() => onSave(section)}
-    className="px-5 py-2.5 bg-primary text-on-primary rounded-lg text-[13px] font-bold hover:opacity-90 active:scale-[0.97] transition-all flex items-center gap-2"
+    disabled={loading}
+    className="px-5 py-2.5 bg-primary text-on-primary rounded-lg text-[13px] font-bold hover:opacity-90 active:scale-[0.97] transition-all flex items-center gap-2 disabled:opacity-60"
   >
-    {savedSection === section ? (
+    {loading ? (
+      <>
+        <span className="material-symbols-outlined animate-spin text-[16px]">sync</span>
+        Menyimpan...
+      </>
+    ) : savedSection === section ? (
       <>
         <span className="material-symbols-outlined text-[16px]">check</span>
         Tersimpan!
@@ -22,16 +30,25 @@ const SaveButton = ({ section, savedSection, onSave }) => (
 );
 
 export const StaffSettingsPage = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Form state — pre-filled from user data
-  const [name, setName] = useState(user?.name || '');
-  const [title, setTitle] = useState(user?.title || '');
-  const [email, setEmail] = useState(`${user?.username || 'staff'}@notaris.id`);
+  // Form state — pre-filled from profile data
+  const [name, setName] = useState('');
+  const [title, setTitle] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+62 812 3456 7890');
 
-
+  // Sync profile data once loaded
+  useEffect(() => {
+    if (profile) {
+      setName(profile.full_name || '');
+      setTitle(profile.title || '');
+      setEmail(user?.email || '');
+    } else if (user) {
+      setEmail(user.email || '');
+    }
+  }, [profile, user]);
 
   // Security
   const [currentPass, setCurrentPass] = useState('');
@@ -39,12 +56,61 @@ export const StaffSettingsPage = () => {
   const [confirmPass, setConfirmPass] = useState('');
   const [showPass, setShowPass] = useState(false);
 
-  // Feedback
+  // Loading and Feedback
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [loadingSecurity, setLoadingSecurity] = useState(false);
   const [savedSection, setSavedSection] = useState('');
 
-  const handleSave = (section) => {
-    setSavedSection(section);
-    setTimeout(() => setSavedSection(''), 2500);
+  const handleSave = async (section) => {
+    if (section === 'profile') {
+      setLoadingProfile(true);
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            full_name: name,
+            title: title,
+            email: email
+          })
+          .eq('id', user.id);
+
+        if (error) throw error;
+        toast.success('Profil berhasil disimpan!');
+        setSavedSection(section);
+        setTimeout(() => setSavedSection(''), 2500);
+      } catch (err) {
+        console.error(err);
+        toast.error('Gagal menyimpan profil: ' + err.message);
+      } finally {
+        setLoadingProfile(false);
+      }
+    } else if (section === 'security') {
+      if (!newPass) {
+        toast.error('Kata sandi baru tidak boleh kosong!');
+        return;
+      }
+      if (newPass !== confirmPass) {
+        toast.error('Konfirmasi kata sandi baru tidak cocok!');
+        return;
+      }
+
+      setLoadingSecurity(true);
+      try {
+        const { error } = await supabase.auth.updateUser({ password: newPass });
+        if (error) throw error;
+        toast.success('Kata sandi berhasil diperbarui!');
+        setSavedSection(section);
+        setCurrentPass('');
+        setNewPass('');
+        setConfirmPass('');
+        setTimeout(() => setSavedSection(''), 2500);
+      } catch (err) {
+        console.error(err);
+        toast.error('Gagal memperbarui kata sandi: ' + err.message);
+      } finally {
+        setLoadingSecurity(false);
+      }
+    }
   };
 
   const handleLogout = () => {
@@ -52,7 +118,7 @@ export const StaffSettingsPage = () => {
     navigate('/login');
   };
 
-
+  const avatarUrl = profile?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80';
 
   return (
     <div className="max-w-3xl space-y-stack-lg text-left">
@@ -77,7 +143,7 @@ export const StaffSettingsPage = () => {
           <div className="flex items-center gap-5">
             <div className="relative">
               <img
-                src={user?.avatar}
+                src={avatarUrl}
                 alt="Avatar"
                 className="w-20 h-20 rounded-full object-cover border-4 border-primary-container"
               />
@@ -86,8 +152,8 @@ export const StaffSettingsPage = () => {
               </button>
             </div>
             <div>
-              <p className="font-bold text-on-surface text-[16px]">{user?.name}</p>
-              <p className="text-[12px] text-primary font-semibold">{user?.title}</p>
+              <p className="font-bold text-on-surface text-[16px]">{profile?.full_name || 'User Notaris'}</p>
+              <p className="text-[12px] text-primary font-semibold">{profile?.title || 'Staf Administrasi'}</p>
               <p className="text-[11px] text-on-surface-variant mt-0.5">{email}</p>
             </div>
           </div>
@@ -120,7 +186,7 @@ export const StaffSettingsPage = () => {
           </div>
 
           <div className="flex justify-end">
-            <SaveButton section="profile" savedSection={savedSection} onSave={handleSave} />
+            <SaveButton section="profile" savedSection={savedSection} onSave={handleSave} loading={loadingProfile} />
           </div>
         </div>
       </div>
@@ -184,7 +250,7 @@ export const StaffSettingsPage = () => {
           )}
 
           <div className="flex justify-end">
-            <SaveButton section="security" savedSection={savedSection} onSave={handleSave} />
+            <SaveButton section="security" savedSection={savedSection} onSave={handleSave} loading={loadingSecurity} />
           </div>
         </div>
       </div>

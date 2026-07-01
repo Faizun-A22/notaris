@@ -276,26 +276,32 @@ export const CreateDocumentPage = () => {
     setLoading(true);
     const mappedService = mapServiceTypeToAbbreviation(serviceType);
 
-    setTimeout(() => {
-      const newCase = addCase({
-        clientName,
-        clientEmail,
-        clientPhone,
-        serviceType: mappedService,
-        category,
-        propertyLocation,
-        transactionValue: transactionValue ? Number(transactionValue) : 0,
-        bankPartner: bankPartner || 'Tidak Ada',
-        estimationDate,
-        entryDate,
-        notes: notes || 'Draf berkas terdaftar.',
-        status: 'Pemeriksaan Dokumen',
-        isDraft: true // Saved as draft flag
-      });
+    setTimeout(async () => {
+      try {
+        await addCase({
+          clientName,
+          clientEmail,
+          clientPhone,
+          serviceType: mappedService,
+          category,
+          propertyLocation,
+          transactionValue: transactionValue ? Number(transactionValue) : 0,
+          bankPartner: bankPartner || 'Tidak Ada',
+          estimationDate,
+          entryDate,
+          notes: notes || 'Draf berkas terdaftar.',
+          status: 'Pemeriksaan Dokumen',
+          isDraft: true // Saved as draft flag
+        });
 
-      setLoading(false);
-      toast.success('Draf berkas berhasil disimpan!');
-      navigate('/staff/dashboard');
+        setLoading(false);
+        toast.success('Draf berkas berhasil disimpan!');
+        navigate('/staff/dashboard');
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+        toast.error('Gagal menyimpan draf berkas!');
+      }
     }, 1000);
   };
 
@@ -306,7 +312,7 @@ export const CreateDocumentPage = () => {
     setLoading(true);
     const mappedService = mapServiceTypeToAbbreviation(serviceType);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       // Build final checklist based on uploads
       const finalChecklist = checklist.map(item => {
         const fileRecord = uploads[item.id];
@@ -321,25 +327,31 @@ export const CreateDocumentPage = () => {
         return item;
       });
 
-      const newCase = addCase({
-        clientName,
-        clientEmail,
-        clientPhone,
-        serviceType: mappedService,
-        category,
-        propertyLocation,
-        transactionValue: Number(transactionValue),
-        bankPartner: bankPartner || 'Tidak Ada',
-        estimationDate,
-        entryDate,
-        notes: notes || 'Berkas baru diterbitkan.',
-        checklist: finalChecklist,
-        status: 'Pemeriksaan Dokumen'
-      });
+      try {
+        const newCase = await addCase({
+          clientName,
+          clientEmail,
+          clientPhone,
+          serviceType: mappedService,
+          category,
+          propertyLocation,
+          transactionValue: Number(transactionValue),
+          bankPartner: bankPartner || 'Tidak Ada',
+          estimationDate,
+          entryDate,
+          notes: notes || 'Berkas baru diterbitkan.',
+          checklist: finalChecklist,
+          status: 'Pemeriksaan Dokumen'
+        });
 
-      setLoading(false);
-      toast.success('Berkas berhasil dibuat dan diterbitkan!');
-      navigate(`/staff/documents/${newCase.id}`);
+        setLoading(false);
+        toast.success('Berkas berhasil dibuat dan diterbitkan!');
+        navigate(`/staff/documents/${newCase.id}`);
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+        toast.error('Gagal membuat berkas!');
+      }
     }, 1200);
   };
 
@@ -743,16 +755,17 @@ export const CreateDocumentPage = () => {
                         <input
                           type="file"
                           id={`file-${item.id}`}
-                          className="sr-only"
+                          className="opacity-0 absolute pointer-events-none w-0 h-0"
                           onChange={(e) => handleFileChange(item.id, e)}
                         />
-                        <label 
-                          htmlFor={`file-${item.id}`}
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById(`file-${item.id}`).click()}
                           className="px-3.5 py-1.5 bg-surface-container-low border border-outline-variant hover:border-primary hover:bg-primary-soft text-primary font-bold text-[11px] rounded-lg cursor-pointer transition-all flex items-center gap-1 active:scale-[0.97]"
                         >
                           <span className="material-symbols-outlined text-[14px]">upload</span>
                           Pilih File
-                        </label>
+                        </button>
                       </div>
                     )}
                   </div>

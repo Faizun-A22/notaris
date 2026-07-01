@@ -10,6 +10,16 @@ export const DocumentDetailPage = () => {
   const navigate = useNavigate();
   const { cases, updateCase, updateCaseStatus, updateCaseStage } = useCases();
 
+  const isImageFile = (url, name) => {
+    if (!url) return false;
+    if (url.startsWith('blob:')) {
+      const ext = name?.toLowerCase().split('.').pop();
+      return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+    }
+    const ext = url.toLowerCase().split('.').pop();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+  };
+
   // Find the current case
   const activeCase = cases.find((c) => c.id === id);
 
@@ -30,11 +40,39 @@ export const DocumentDetailPage = () => {
   const [remarksText, setRemarksText] = useState('');
 
   // Update remarks when activeCase loads
+  const [showEditDetailsModal, setShowEditDetailsModal] = useState(false);
+  const [editNotes, setEditNotes] = useState('');
+  const [editFees, setEditFees] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editBank, setEditBank] = useState('');
+  const [editEstimationDate, setEditEstimationDate] = useState('');
+
   useEffect(() => {
     if (activeCase) {
       setRemarksText(activeCase.notes || '');
+      setEditNotes(activeCase.notes || '');
+      setEditFees(activeCase.fees || '');
+      setEditLocation(activeCase.propertyLocation || '');
+      setEditBank(activeCase.bankPartner || '');
+      setEditEstimationDate(activeCase.estimationDate || '');
     }
   }, [activeCase]);
+
+  const handleSaveDetails = async () => {
+    try {
+      await updateCase(activeCase.id, {
+        notes: editNotes,
+        fees: Number(editFees) || 0,
+        propertyLocation: editLocation,
+        bankPartner: editBank,
+        estimationDate: editEstimationDate
+      });
+      setShowEditDetailsModal(false);
+      toast.success('Detail berkas berhasil diperbarui!');
+    } catch (err) {
+      toast.error('Gagal memperbarui detail berkas!');
+    }
+  };
 
   if (!activeCase) {
     return (
@@ -746,9 +784,16 @@ export const DocumentDetailPage = () => {
     return 'Belum';
   };
 
-  const handleUpdateChecklistStatus = (itemId, newStatus) => {
+  const handleUpdateChecklistStatus = (itemId, newStatus, fileData = null) => {
     const updatedChecklist = checklist.map((item) =>
-      item.id === itemId ? { ...item, status: newStatus } : item
+      item.id === itemId 
+        ? { 
+            ...item, 
+            status: newStatus,
+            fileName: fileData ? fileData.name : (newStatus === 'Belum Ada' ? null : item.fileName),
+            fileUrl: fileData ? fileData.url : (newStatus === 'Belum Ada' ? null : item.fileUrl)
+          } 
+        : item
     );
     updateCase(activeCase.id, {
       checklist: updatedChecklist,
@@ -962,10 +1007,11 @@ export const DocumentDetailPage = () => {
             <span>Bagikan Link</span>
           </button>
           <button
-            onClick={() => setIsEditingRemarks(true)}
-            className="px-4 py-2 border border-outline-variant rounded-lg text-primary font-label-bold hover:bg-surface-container-low transition-colors text-[13px] font-semibold bg-white"
+            onClick={() => setShowEditDetailsModal(true)}
+            className="px-4 py-2 border border-outline-variant rounded-lg text-primary font-label-bold hover:bg-surface-container-low transition-colors text-[13px] font-semibold bg-white flex items-center gap-1.5 shadow-sm"
           >
-            Ubah Catatan
+            <span className="material-symbols-outlined text-[16px]">edit</span>
+            <span>Ubah Detail & Biaya</span>
           </button>
           <button
             onClick={() => navigate('/staff/dashboard')}
@@ -1480,20 +1526,36 @@ export const DocumentDetailPage = () => {
                 Persyaratan: <strong className="text-on-surface">{selectedDocForUpload.name}</strong>
               </p>
 
-              <div
-                onClick={() => handleUpdateChecklistStatus(selectedDocForUpload.id, 'Perlu Verifikasi')}
-                className="border-2 border-dashed border-primary/40 hover:border-primary rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer bg-primary/5 transition-all group hover:scale-[1.01]"
-              >
-                <span className="material-symbols-outlined text-[48px] text-primary mb-3 group-hover:scale-110 transition-transform">
-                  cloud_upload
-                </span>
-                <h4 className="text-[13px] font-bold text-on-surface">
-                  Tarik berkas ke sini atau <span className="text-primary underline">klik untuk mencari</span>
-                </h4>
-                <p className="text-[10px] text-on-surface-variant mt-2 max-w-xs leading-normal">
-                  Mendukung format PDF, JPG, atau PNG dengan ukuran maksimal 10MB.
-                </p>
-              </div>
+              <input
+                 type="file"
+                 id={`modal-file-${selectedDocForUpload.id}`}
+                 className="opacity-0 absolute pointer-events-none w-0 h-0"
+                 onChange={(e) => {
+                   const file = e.target.files[0];
+                   if (!file) return;
+                   const fileData = {
+                     name: file.name,
+                     url: URL.createObjectURL(file)
+                   };
+                   handleUpdateChecklistStatus(selectedDocForUpload.id, 'Perlu Verifikasi', fileData);
+                   setSelectedDocForUpload(null);
+                 }}
+               />
+
+               <div
+                 onClick={() => document.getElementById(`modal-file-${selectedDocForUpload.id}`).click()}
+                 className="border-2 border-dashed border-primary/40 hover:border-primary rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer bg-primary/5 transition-all group hover:scale-[1.01]"
+               >
+                 <span className="material-symbols-outlined text-[48px] text-primary mb-3 group-hover:scale-110 transition-transform">
+                   cloud_upload
+                 </span>
+                 <h4 className="text-[13px] font-bold text-on-surface">
+                   Tarik berkas ke sini atau <span className="text-primary underline">klik untuk mencari</span>
+                 </h4>
+                 <p className="text-[10px] text-on-surface-variant mt-2 max-w-xs leading-normal">
+                   Mendukung format PDF, JPG, atau PNG dengan ukuran maksimal 10MB.
+                 </p>
+               </div>
 
               <div className="mt-6 flex gap-3">
                 <button
@@ -1530,26 +1592,53 @@ export const DocumentDetailPage = () => {
                 Verifikasi Dokumen: {selectedDocForReview.name}
               </h3>
 
-              <div className="bg-surface-container-low border border-dashed border-outline-variant rounded-lg p-6 flex flex-col items-center justify-center min-h-[250px] relative overflow-hidden">
-                <div className="absolute inset-0 bg-amber-500/5 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center p-4 select-none">
-                  <span className="material-symbols-outlined text-amber-600 text-[40px] mb-2">pending_actions</span>
-                  <p className="text-[12px] font-bold text-amber-800">Menunggu Verifikasi Staf</p>
-                  <p className="text-[10px] text-amber-700 mt-1 max-w-xs text-center font-medium">
-                    Pastikan kecocokan NIK, Nama, dan masa berlaku dokumen sebelum melakukan persetujuan.
-                  </p>
-                </div>
-
-                <div className="w-[300px] h-[200px] bg-white border border-outline-variant shadow rounded-lg p-4 flex flex-col justify-between text-on-surface opacity-30 select-none">
-                  <div className="border-b pb-2 flex justify-between items-center">
-                    <div className="flex items-center gap-1 text-primary">
-                      <span className="material-symbols-outlined text-[18px]">description</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider">{selectedDocForReview.name}</span>
+              <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 flex flex-col items-center justify-center min-h-[300px] relative">
+                {selectedDocForReview.fileUrl ? (
+                  isImageFile(selectedDocForReview.fileUrl, selectedDocForReview.fileName) ? (
+                    <div className="flex flex-col items-center gap-3 w-full">
+                      <img 
+                        src={selectedDocForReview.fileUrl} 
+                        className="max-h-[260px] max-w-full object-contain rounded-lg border border-outline-variant shadow-sm"
+                        alt="Pratinjau Dokumen"
+                      />
+                      <p className="text-[11px] text-on-surface-variant font-medium truncate w-full text-center">
+                        File: {selectedDocForReview.fileName}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-6 bg-white border border-outline-variant rounded-lg shadow-sm w-full max-w-[320px] text-center">
+                      <span className="material-symbols-outlined text-[48px] text-primary mb-2">picture_as_pdf</span>
+                      <p className="text-[12.5px] font-bold text-on-surface truncate w-full">{selectedDocForReview.fileName || 'Dokumen PDF'}</p>
+                      <p className="text-[10px] text-on-surface-variant mt-1 leading-normal">Dokumen ini bertipe PDF. Klik tombol di bawah untuk membukanya.</p>
+                      <a 
+                        href={selectedDocForReview.fileUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="mt-4 px-4 py-2 bg-primary text-white text-[11px] font-bold rounded-lg hover:opacity-90 transition-all flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">open_in_new</span>
+                        Buka PDF di Tab Baru
+                      </a>
+                    </div>
+                  )
+                ) : (
+                  <div className="w-[300px] h-[200px] bg-white border border-outline-variant shadow rounded-lg p-4 flex flex-col justify-between text-on-surface relative overflow-hidden">
+                    <div className="absolute inset-0 bg-amber-500/5 z-0 flex flex-col items-center justify-center p-4 text-center">
+                      <span className="material-symbols-outlined text-amber-600 text-[32px] mb-1">pending_actions</span>
+                      <p className="text-[11px] font-bold text-amber-800">Menunggu Verifikasi (Simulasi)</p>
+                      <p className="text-[9px] text-on-surface-variant mt-1 leading-tight">Tidak ada file fisik yang diunggah. Gunakan tombol verifikasi di bawah untuk menyetujui dokumen ini.</p>
+                    </div>
+                    <div className="border-b pb-2 flex justify-between items-center opacity-20 select-none">
+                      <div className="flex items-center gap-1 text-primary">
+                        <span className="material-symbols-outlined text-[18px]">description</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{selectedDocForReview.name}</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 flex flex-col justify-center gap-2 py-4 opacity-20 select-none">
+                      <div className="w-full h-2 bg-surface-container-high rounded"></div>
                     </div>
                   </div>
-                  <div className="flex-1 flex flex-col justify-center gap-2 py-4">
-                    <div className="w-full h-2 bg-surface-container-high rounded"></div>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="mt-6 flex gap-3">
@@ -1734,6 +1823,116 @@ export const DocumentDetailPage = () => {
                   className="px-5 py-2 border border-outline-variant rounded-lg text-[12px] font-bold hover:bg-surface-container-low transition-colors"
                 >
                   Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* === MODAL: EDIT CASE DETAILS & FEES === */}
+        {showEditDetailsModal && (
+          <div className="fixed inset-0 bg-inverse-surface/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white border border-outline-variant rounded-xl w-full max-w-md p-6 relative shadow-xl text-left animate-in fade-in zoom-in-95 duration-200">
+              <button
+                onClick={() => setShowEditDetailsModal(false)}
+                className="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface transition-colors"
+              >
+                <span className="material-symbols-outlined text-[24px]">close</span>
+              </button>
+
+              <div className="flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-primary text-[28px]">edit_document</span>
+                <h3 className="font-bold text-[16px] text-primary uppercase tracking-wide">
+                  Ubah Detail & Biaya Berkas
+                </h3>
+              </div>
+              <p className="text-[12.5px] text-on-surface-variant border-b pb-3 mb-4 font-medium leading-normal">
+                Perbarui informasi transaksi dan administrasi berkas milik <strong className="text-on-surface">{activeCase.clientName}</strong>.
+              </p>
+
+              <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
+                {/* Biaya Akta */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                    Biaya Akta (Rupiah)
+                  </label>
+                  <input
+                    type="number"
+                    value={editFees}
+                    onChange={(e) => setEditFees(e.target.value)}
+                    className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none"
+                    placeholder="Contoh: 12000000"
+                  />
+                </div>
+
+                {/* Lokasi Objek */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                    Lokasi Objek
+                  </label>
+                  <input
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none"
+                    placeholder="Contoh: Jakarta Selatan"
+                  />
+                </div>
+
+                {/* Bank Rekanan */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                    Bank Rekanan
+                  </label>
+                  <input
+                    type="text"
+                    value={editBank}
+                    onChange={(e) => setEditBank(e.target.value)}
+                    className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none"
+                    placeholder="Contoh: Bank Mandiri"
+                  />
+                </div>
+
+                {/* Estimasi Selesai */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                    Estimasi Selesai
+                  </label>
+                  <input
+                    type="date"
+                    value={editEstimationDate}
+                    onChange={(e) => setEditEstimationDate(e.target.value)}
+                    className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none"
+                  />
+                </div>
+
+                {/* Catatan / Remarks */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                    Catatan Notaris / Remarks
+                  </label>
+                  <textarea
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none"
+                    rows="3"
+                    placeholder="Tulis catatan khusus berkas..."
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 pt-3 border-t border-outline-variant flex gap-3">
+                <button
+                  onClick={() => setShowEditDetailsModal(false)}
+                  className="flex-1 py-2 border border-outline-variant rounded-lg text-[12.5px] font-bold hover:bg-surface-container-low transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleSaveDetails}
+                  className="flex-1 py-2 bg-primary text-on-primary rounded-lg text-[12.5px] font-bold hover:opacity-90 transition-all shadow-md"
+                >
+                  Simpan Perubahan
                 </button>
               </div>
             </div>

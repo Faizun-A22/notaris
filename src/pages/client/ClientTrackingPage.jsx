@@ -5,31 +5,34 @@ import { formatDate } from '../../utils/formatDate';
 import { StatusBadge } from '../../components/common/StatusBadge';
 
 export const ClientTrackingPage = () => {
-  const { cases } = useCases();
+  const { trackCase } = useCases();
   const [searchParams] = useSearchParams();
   const [caseNum, setCaseNum] = useState('');
   const [searchedCase, setSearchedCase] = useState(null);
   const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const caseParam = searchParams.get('case');
-    if (caseParam && cases.length > 0) {
+    if (caseParam) {
       setCaseNum(caseParam);
       setSearched(true);
-      const found = cases.find(
-        (c) => c.caseNumber.trim().toLowerCase() === caseParam.trim().toLowerCase()
-      );
-      setSearchedCase(found || null);
+      setLoading(true);
+      trackCase(caseParam).then((found) => {
+        setSearchedCase(found);
+        setLoading(false);
+      });
     }
-  }, [searchParams, cases]);
+  }, [searchParams]);
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
+    if (!caseNum.trim()) return;
     setSearched(true);
-    const found = cases.find(
-      (c) => c.caseNumber.trim().toLowerCase() === caseNum.trim().toLowerCase()
-    );
-    setSearchedCase(found || null);
+    setLoading(true);
+    const found = await trackCase(caseNum);
+    setSearchedCase(found);
+    setLoading(false);
   };
 
   const getStagesForCase = (c) => {
@@ -437,7 +440,12 @@ export const ClientTrackingPage = () => {
         </form>
 
         {/* Display results */}
-        {searched && (
+        {loading ? (
+          <div className="py-12 text-center text-on-surface-variant">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+            <p className="text-[13px]">Mencari berkas di database...</p>
+          </div>
+        ) : searched && (
           <div className="border-t border-outline-variant pt-6 text-left animate-in fade-in slide-in-from-bottom-4 duration-200">
             {searchedCase ? (
               <div className="space-y-6">

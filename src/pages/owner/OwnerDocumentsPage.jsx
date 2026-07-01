@@ -42,7 +42,15 @@ export const OwnerDocumentsPage = () => {
     if (selectedCase?.id === id) setSelectedCase(null);
   };
 
-  const STATUSES = ['Verifikasi Sertifikat', 'Validasi Pajak', 'Pemeriksaan Dokumen', 'Penyusunan Draf', 'Selesai'];
+  const STATUSES = [
+    'Pemeriksaan Dokumen',
+    'Verifikasi Sertifikat',
+    'Penyusunan Draf',
+    'Tanda Tangan Akta',
+    'Validasi Pajak',
+    'Proses BPN',
+    'Selesai'
+  ];
 
   return (
     <div className="space-y-stack-lg text-left">

@@ -53,11 +53,13 @@ export const Sidebar = ({ isOpen, onClose }) => {
       path: role === ROLES.OWNER ? '/owner/dashboard' : '/staff/dashboard',
       icon: 'dashboard',
     },
-    {
-      label: 'File Baru',
-      path: '/staff/buat-berkas',
-      icon: 'add_box',
-    },
+    ...(role === ROLES.STAFF ? [
+      {
+        label: 'File Baru',
+        path: '/staff/buat-berkas',
+        icon: 'add_box',
+      }
+    ] : []),
     {
       label: 'Semua File',
       path: role === ROLES.OWNER ? '/owner/documents' : '/staff/documents',
@@ -69,8 +71,8 @@ export const Sidebar = ({ isOpen, onClose }) => {
       icon: 'group',
     },
     {
-      label: 'Laporan',
-      path: '/staff/activity', // Points to StaffActivityPage or equivalent activity log workflow
+      label: 'Aktivitas Staf',
+      path: role === ROLES.OWNER ? '/owner/activity' : '/staff/activity',
       icon: 'bar_chart',
     },
     {

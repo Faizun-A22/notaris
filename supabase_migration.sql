@@ -1,5 +1,5 @@
 -- ============================================================
--- NOTARIS DIGITAL — SUPABASE DATABASE MIGRATION
+-- NOTARIS DIGITAL — SUPABASE DATABASE MIGRATION WITH HISTORY & BACKUP
 -- Jalankan file ini di: Supabase Dashboard > SQL Editor > New Query
 -- ============================================================
 
@@ -9,25 +9,111 @@
 CREATE EXTENSION IF NOT EXISTS moddatetime SCHEMA extensions;
 
 -- ============================================================
--- 2. TABEL PROFILES (user data, linked to auth.users)
+-- 2. TABEL PROFILES (Dibuat di awal agar fungsi get_my_role() dapat dikompilasi)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS profiles (
   id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name   TEXT NOT NULL,
   title       TEXT,
   role        TEXT NOT NULL CHECK (role IN ('owner', 'staff')),
+  email       TEXT,
   avatar_url  TEXT,
   is_active   BOOLEAN DEFAULT TRUE,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TRIGGER set_profiles_updated_at
+CREATE OR REPLACE TRIGGER set_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at);
 
 -- ============================================================
--- 3. TABEL CASES (berkas notaris)
+-- 3. HELPER FUNCTIONS & RPC (Dideklarasikan setelah tabel profiles terbentuk)
+-- ============================================================
+-- Fungsi helper untuk menghindari recursive loop RLS pada tabel profiles
+CREATE OR REPLACE FUNCTION public.get_my_role()
+RETURNS TEXT AS $$
+  SELECT role FROM public.profiles WHERE id = auth.uid()
+$$ LANGUAGE SQL SECURITY DEFINER STABLE;
+
+-- RPC untuk tracking berkas secara publik (hanya mengembalikan info non-sensitif)
+CREATE OR REPLACE FUNCTION public.track_case(p_case_number TEXT)
+RETURNS TABLE (
+  id UUID,
+  case_number TEXT,
+  category TEXT,
+  service_type TEXT,
+  status TEXT,
+  current_stage_id INTEGER,
+  is_complete BOOLEAN,
+  documents_ready BOOLEAN,
+  entry_date DATE,
+  estimation_date DATE,
+  checklist JSONB,
+  logs JSONB
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    c.id,
+    c.case_number,
+    c.category,
+    c.service_type,
+    c.status,
+    c.current_stage_id,
+    c.is_complete,
+    c.documents_ready,
+    c.entry_date,
+    c.estimation_date,
+    COALESCE(
+      (
+        SELECT jsonb_agg(jsonb_build_object(
+          'id', ci.id,
+          'order_num', ci.order_num,
+          'name', ci.name,
+          'description', ci.description,
+          'status', ci.status
+        ) ORDER BY ci.order_num)
+        FROM public.checklist_items ci
+        WHERE ci.case_id = c.id
+      ),
+      '[]'::jsonb
+    ) AS checklist,
+    COALESCE(
+      (
+        SELECT jsonb_agg(jsonb_build_object(
+          'timestamp', al.created_at,
+          'user', al.user_name,
+          'action', al.action
+        ) ORDER BY al.created_at)
+        FROM public.activity_logs al
+        WHERE al.case_id = c.id
+      ),
+      '[]'::jsonb
+    ) AS logs
+  FROM public.cases c
+  WHERE LOWER(TRIM(c.case_number)) = LOWER(TRIM(p_case_number));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================
+-- 4. TABEL CLIENTS (Master data & Backup)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS clients (
+  id           TEXT PRIMARY KEY, -- client_id (NIK / identifier)
+  name         TEXT NOT NULL,
+  phone        TEXT,
+  email        TEXT,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE OR REPLACE TRIGGER set_clients_updated_at
+  BEFORE UPDATE ON clients
+  FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at);
+
+-- ============================================================
+-- 5. TABEL CASES (berkas notaris)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS cases (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -54,7 +140,7 @@ CREATE TABLE IF NOT EXISTS cases (
   updated_at        TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TRIGGER set_cases_updated_at
+CREATE OR REPLACE TRIGGER set_cases_updated_at
   BEFORE UPDATE ON cases
   FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at);
 
@@ -64,7 +150,7 @@ CREATE INDEX IF NOT EXISTS idx_cases_service_type ON cases(service_type);
 CREATE INDEX IF NOT EXISTS idx_cases_is_complete ON cases(is_complete);
 
 -- ============================================================
--- 4. TABEL CHECKLIST_TEMPLATES (default per service type)
+-- 6. TABEL CHECKLIST_TEMPLATES (default per service type)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS checklist_templates (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -76,7 +162,7 @@ CREATE TABLE IF NOT EXISTS checklist_templates (
 );
 
 -- ============================================================
--- 5. TABEL CHECKLIST_ITEMS (dokumen per berkas)
+-- 7. TABEL CHECKLIST_ITEMS (dokumen per berkas)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS checklist_items (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -95,7 +181,7 @@ CREATE TABLE IF NOT EXISTS checklist_items (
 CREATE INDEX IF NOT EXISTS idx_checklist_case_id ON checklist_items(case_id);
 
 -- ============================================================
--- 6. TABEL ACTIVITY_LOGS
+-- 8. TABEL ACTIVITY_LOGS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS activity_logs (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -113,7 +199,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_case_id ON activity_logs(case_id);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at DESC);
 
 -- ============================================================
--- 7. TABEL SERVICES (referensi jenis layanan)
+-- 9. TABEL SERVICES (referensi jenis layanan)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS services (
   id           TEXT PRIMARY KEY,
@@ -126,20 +212,217 @@ CREATE TABLE IF NOT EXISTS services (
 );
 
 -- ============================================================
--- 8. ROW LEVEL SECURITY (RLS)
+-- 10. TABEL BACKUP / HISTORY (AUDIT TRAILS)
+-- ============================================================
+-- Tabel Backup Riwayat Berkas (Cases History)
+CREATE TABLE IF NOT EXISTS cases_history (
+  history_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id            UUID NOT NULL,
+  case_number        TEXT NOT NULL,
+  client_name        TEXT NOT NULL,
+  client_id          TEXT NOT NULL,
+  client_phone       TEXT,
+  client_email       TEXT,
+  category           TEXT NOT NULL,
+  service_type       TEXT NOT NULL,
+  status             TEXT NOT NULL,
+  current_stage_id   INTEGER,
+  is_complete        BOOLEAN,
+  documents_ready    BOOLEAN,
+  notes              TEXT,
+  fees               BIGINT,
+  property_location  TEXT,
+  bank_partner       TEXT,
+  entry_date         DATE,
+  estimation_date    DATE,
+  assigned_staff_id  UUID,
+  created_by_id      UUID,
+  updated_by_id      UUID, -- User yang mengubah
+  change_type        TEXT NOT NULL CHECK (change_type IN ('INSERT', 'UPDATE', 'DELETE')),
+  changed_at         TIMESTAMPTZ DEFAULT NOW(),
+  old_data           JSONB, -- Snapshot data lama
+  new_data           JSONB  -- Snapshot data baru
+);
+
+CREATE INDEX IF NOT EXISTS idx_cases_hist_case_id ON cases_history(case_id);
+CREATE INDEX IF NOT EXISTS idx_cases_hist_changed_at ON cases_history(changed_at DESC);
+
+-- Tabel Backup Riwayat Checklist Dokumen
+CREATE TABLE IF NOT EXISTS checklist_items_history (
+  history_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  item_id         UUID NOT NULL,
+  case_id         UUID NOT NULL,
+  order_num       INTEGER NOT NULL,
+  name            TEXT NOT NULL,
+  description     TEXT,
+  status          TEXT NOT NULL,
+  file_url        TEXT,
+  file_name       TEXT,
+  updated_by      UUID, -- User yang mengubah
+  change_type     TEXT NOT NULL CHECK (change_type IN ('INSERT', 'UPDATE', 'DELETE')),
+  changed_at      TIMESTAMPTZ DEFAULT NOW(),
+  old_data        JSONB, -- Snapshot data lama
+  new_data        JSONB  -- Snapshot data baru
+);
+
+CREATE INDEX IF NOT EXISTS idx_chk_items_hist_case_id ON checklist_items_history(case_id);
+
+-- ============================================================
+-- 11. TRIGGERS UNTUK SINKRONISASI & BACKUP OTOMATIS
+-- ============================================================
+
+-- A. Trigger untuk Sinkronisasi Otomatis Profil Klien ke Tabel Master 'clients'
+CREATE OR REPLACE FUNCTION public.sync_client_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.clients (id, name, phone, email, updated_at)
+  VALUES (NEW.client_id, NEW.client_name, NEW.client_phone, NEW.client_email, NOW())
+  ON CONFLICT (id) DO UPDATE
+  SET 
+    name = EXCLUDED.name,
+    phone = COALESCE(EXCLUDED.phone, clients.phone),
+    email = COALESCE(EXCLUDED.email, clients.email),
+    updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER sync_client_profile_trigger
+  AFTER INSERT OR UPDATE ON public.cases
+  FOR EACH ROW EXECUTE FUNCTION public.sync_client_profile();
+
+-- B. Trigger untuk Backup Otomatis Kasus ke 'cases_history'
+CREATE OR REPLACE FUNCTION public.log_case_history()
+RETURNS TRIGGER AS $$
+DECLARE
+  current_user_id UUID;
+BEGIN
+  BEGIN
+    current_user_id := auth.uid();
+  EXCEPTION WHEN OTHERS THEN
+    current_user_id := NULL;
+  END;
+
+  IF (TG_OP = 'DELETE') THEN
+    INSERT INTO public.cases_history (
+      case_id, case_number, client_name, client_id, client_phone, client_email,
+      category, service_type, status, current_stage_id, is_complete, documents_ready,
+      notes, fees, property_location, bank_partner, entry_date, estimation_date,
+      assigned_staff_id, created_by_id, updated_by_id, change_type, old_data
+    ) VALUES (
+      OLD.id, OLD.case_number, OLD.client_name, OLD.client_id, OLD.client_phone, OLD.client_email,
+      OLD.category, OLD.service_type, OLD.status, OLD.current_stage_id, OLD.is_complete, OLD.documents_ready,
+      OLD.notes, OLD.fees, OLD.property_location, OLD.bank_partner, OLD.entry_date, OLD.estimation_date,
+      OLD.assigned_staff_id, OLD.created_by_id, current_user_id, 'DELETE', to_jsonb(OLD)
+    );
+    RETURN OLD;
+  ELSIF (TG_OP = 'UPDATE') THEN
+    INSERT INTO public.cases_history (
+      case_id, case_number, client_name, client_id, client_phone, client_email,
+      category, service_type, status, current_stage_id, is_complete, documents_ready,
+      notes, fees, property_location, bank_partner, entry_date, estimation_date,
+      assigned_staff_id, created_by_id, updated_by_id, change_type, old_data, new_data
+    ) VALUES (
+      NEW.id, NEW.case_number, NEW.client_name, NEW.client_id, NEW.client_phone, NEW.client_email,
+      NEW.category, NEW.service_type, NEW.status, NEW.current_stage_id, NEW.is_complete, NEW.documents_ready,
+      NEW.notes, NEW.fees, NEW.property_location, NEW.bank_partner, NEW.entry_date, NEW.estimation_date,
+      NEW.assigned_staff_id, NEW.created_by_id, current_user_id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW)
+    );
+    RETURN NEW;
+  ELSIF (TG_OP = 'INSERT') THEN
+    INSERT INTO public.cases_history (
+      case_id, case_number, client_name, client_id, client_phone, client_email,
+      category, service_type, status, current_stage_id, is_complete, documents_ready,
+      notes, fees, property_location, bank_partner, entry_date, estimation_date,
+      assigned_staff_id, created_by_id, updated_by_id, change_type, new_data
+    ) VALUES (
+      NEW.id, NEW.case_number, NEW.client_name, NEW.client_id, NEW.client_phone, NEW.client_email,
+      NEW.category, NEW.service_type, NEW.status, NEW.current_stage_id, NEW.is_complete, NEW.documents_ready,
+      NEW.notes, NEW.fees, NEW.property_location, NEW.bank_partner, NEW.entry_date, NEW.estimation_date,
+      NEW.assigned_staff_id, NEW.created_by_id, current_user_id, 'INSERT', to_jsonb(NEW)
+    );
+    RETURN NEW;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER log_case_history_trigger
+  AFTER INSERT OR UPDATE OR DELETE ON public.cases
+  FOR EACH ROW EXECUTE FUNCTION public.log_case_history();
+
+-- C. Trigger untuk Backup Otomatis Checklist Item ke 'checklist_items_history'
+CREATE OR REPLACE FUNCTION public.log_checklist_item_history()
+RETURNS TRIGGER AS $$
+DECLARE
+  current_user_id UUID;
+BEGIN
+  BEGIN
+    current_user_id := auth.uid();
+  EXCEPTION WHEN OTHERS THEN
+    current_user_id := NULL;
+  END;
+
+  IF (TG_OP = 'DELETE') THEN
+    INSERT INTO public.checklist_items_history (
+      item_id, case_id, order_num, name, description, status, file_url, file_name,
+      updated_by, change_type, old_data
+    ) VALUES (
+      OLD.id, OLD.case_id, OLD.order_num, OLD.name, OLD.description, OLD.status, OLD.file_url, OLD.file_name,
+      current_user_id, 'DELETE', to_jsonb(OLD)
+    );
+    RETURN OLD;
+  ELSIF (TG_OP = 'UPDATE') THEN
+    INSERT INTO public.checklist_items_history (
+      item_id, case_id, order_num, name, description, status, file_url, file_name,
+      updated_by, change_type, old_data, new_data
+    ) VALUES (
+      NEW.id, NEW.case_id, NEW.order_num, NEW.name, NEW.description, NEW.status, NEW.file_url, NEW.file_name,
+      current_user_id, 'UPDATE', to_jsonb(OLD), to_jsonb(NEW)
+    );
+    RETURN NEW;
+  ELSIF (TG_OP = 'INSERT') THEN
+    INSERT INTO public.checklist_items_history (
+      item_id, case_id, order_num, name, description, status, file_url, file_name,
+      updated_by, change_type, new_data
+    ) VALUES (
+      NEW.id, NEW.case_id, NEW.order_num, NEW.name, NEW.description, NEW.status, NEW.file_url, NEW.file_name,
+      current_user_id, 'INSERT', to_jsonb(NEW)
+    );
+    RETURN NEW;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER log_checklist_item_history_trigger
+  AFTER INSERT OR UPDATE OR DELETE ON public.checklist_items
+  FOR EACH ROW EXECUTE FUNCTION public.log_checklist_item_history();
+
+-- ============================================================
+-- 12. ROW LEVEL SECURITY (RLS)
 -- ============================================================
 
 -- PROFILES
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Auth users view profiles" ON profiles FOR SELECT
-  USING (auth.role() = 'authenticated');
+CREATE POLICY "profiles_select" ON profiles
+  FOR SELECT USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Owner manage profiles" ON profiles FOR ALL
-  USING (EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'owner'));
+CREATE POLICY "profiles_self_update" ON profiles
+  FOR UPDATE USING (id = auth.uid());
 
-CREATE POLICY "User update own profile" ON profiles FOR UPDATE
-  USING (id = auth.uid());
+CREATE POLICY "profiles_insert" ON profiles
+  FOR INSERT WITH CHECK (id = auth.uid() OR public.get_my_role() = 'owner');
+
+CREATE POLICY "profiles_owner_delete" ON profiles
+  FOR DELETE USING (public.get_my_role() = 'owner');
+
+-- CLIENTS
+ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "clients_select" ON clients
+  FOR SELECT USING (auth.role() = 'authenticated');
 
 -- CASES
 ALTER TABLE cases ENABLE ROW LEVEL SECURITY;
@@ -204,8 +487,20 @@ CREATE POLICY "Anyone read services" ON services FOR SELECT
 CREATE POLICY "Owner manage services" ON services FOR ALL
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner'));
 
+-- CASES_HISTORY (read-only backup trail untuk Owner)
+ALTER TABLE cases_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Owner view cases history" ON cases_history FOR SELECT
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner'));
+
+-- CHECKLIST_ITEMS_HISTORY (read-only backup trail untuk Owner)
+ALTER TABLE checklist_items_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Owner view checklist history" ON checklist_items_history FOR SELECT
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'owner'));
+
 -- ============================================================
--- 9. SEED DATA — SERVICES
+-- 13. SEED DATA — SERVICES
 -- ============================================================
 INSERT INTO services (id, name, category, average_time, base_fee, description) VALUES
   ('AJB',     'Akta Jual Beli',                              'ppat',    '3-5 Hari Kerja',   12000000, 'Akta otentik yang membuktikan peralihan hak atas tanah dan bangunan karena transaksi jual beli.'),
@@ -225,14 +520,14 @@ INSERT INTO services (id, name, category, average_time, base_fee, description) V
   ('SKUM',    'Akta Surat Kuasa Untuk Menjual',              'notaris', '2-3 Hari Kerja',    5000000, 'Surat kuasa resmi yang memberikan kewenangan untuk menjual properti.'),
   ('SEWA',    'Akta Perjanjian Sewa Menyewa',                'notaris', '2-3 Hari Kerja',    5000000, 'Akta perjanjian sewa menyewa properti antara pemilik dan penyewa.'),
   ('CONSEN',  'Akta Consen Roya',                            'notaris', '3-5 Hari Kerja',    5000000, 'Akta persetujuan roya untuk penghapusan hak tanggungan.'),
-  ('APK',     'Akta Perjanjian Kredit',                      'notaris', '3-5 Hari Kerja',    6000000, 'Akta perjanjian kredit antara debitur dan kreditur.'),
+  ('APK',     'Akta Perjanjian Kredit',                      'notaris', '3-5 Hari Kerja',    6000000, 'Akta perjanjian kredit antara debitur and kreditur.'),
   ('YAYASAN', 'Akta Pendirian Yayasan',                      'notaris', '7-10 Hari Kerja',  15000000, 'Akta pendirian yayasan lengkap dengan pengesahan Kemenkumham.'),
   ('PT',      'Akta Pendirian PT',                           'notaris', '7-10 Hari Kerja',  25000000, 'Akta pendirian Perseroan Terbatas lengkap dengan pengesahan Kemenkumham.'),
   ('CV',      'Akta Pendirian/Perubahan CV',                 'notaris', '5-7 Hari Kerja',   15000000, 'Akta pendirian atau perubahan Commanditaire Vennootschap dengan pendaftaran Kemenkumham.')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
--- 10. SEED DATA — CHECKLIST TEMPLATES (AJB)
+-- 14. SEED DATA — CHECKLIST TEMPLATES (AJB)
 -- ============================================================
 INSERT INTO checklist_templates (service_type, order_num, name, description) VALUES
   ('AJB',  1,  'Sertifikat Asli',                        'Sertifikat asli (HM/HGB/HP) dari BPN'),
@@ -474,10 +769,9 @@ INSERT INTO checklist_templates (service_type, order_num, name, description) VAL
   ('HT', 6, 'Bukti Validasi PBB',                       'Latest property tax receipt'),
   ('HT', 7, 'Surat Pernyataan Pemasangan APHT',         'Required statement form'),
   ('HT', 8, 'Dokumen Pendukung Lainnya',                'Other required attachments')
-
 ON CONFLICT (service_type, order_num) DO NOTHING;
 
 -- ============================================================
 -- SELESAI! Semua tabel dan data berhasil dibuat.
 -- ============================================================
-SELECT 'Migration completed successfully!' AS status;
+SELECT 'Migration with Audit Trails completed successfully!' AS status;

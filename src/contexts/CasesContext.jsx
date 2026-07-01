@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { mockCases as initialCases } from '../data/mockCases';
 import { generateCaseNumber } from '../utils/generateCaseNumber';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 export const getDefaultChecklist = (serviceType) => {
   if (serviceType === 'SKMHT') {
@@ -275,484 +276,750 @@ export const getDefaultChecklist = (serviceType) => {
 
 export const CasesContext = createContext(null);
 
+// Mapper untuk mengubah format data Supabase (snake_case) ke format React (camelCase)
+const mapCaseFromDb = (dbCase, dbChecklist = [], dbLogs = []) => {
+  return {
+    id: dbCase.id,
+    caseNumber: dbCase.case_number,
+    clientId: dbCase.client_id,
+    clientName: dbCase.client_name,
+    clientPhone: dbCase.client_phone,
+    clientEmail: dbCase.client_email,
+    category: dbCase.category,
+    serviceType: dbCase.service_type,
+    status: dbCase.status,
+    currentStageId: dbCase.current_stage_id,
+    isComplete: dbCase.is_complete,
+    documentsReady: dbCase.documents_ready,
+    isDraft: dbCase.is_draft,
+    notes: dbCase.notes,
+    fees: Number(dbCase.fees || 0),
+    propertyLocation: dbCase.property_location,
+    bankPartner: dbCase.bank_partner,
+    entryDate: dbCase.entry_date,
+    estimationDate: dbCase.estimation_date,
+    assignedStaffId: dbCase.assigned_staff_id,
+    assignedStaff: dbCase.assigned_staff?.full_name || 'Belum ditugaskan',
+    createdById: dbCase.created_by_id,
+    creatorName: dbCase.creator?.full_name || 'Sistem',
+    createdAt: dbCase.created_at,
+    updatedAt: dbCase.updated_at,
+    checklist: (dbChecklist || []).map(item => ({
+      id: item.id,
+      orderNum: item.order_num,
+      name: item.name,
+      description: item.description,
+      status: item.status,
+      fileUrl: item.file_url,
+      fileName: item.file_name,
+      updatedAt: item.updated_at,
+      updatedBy: item.updated_by
+    })).sort((a, b) => a.orderNum - b.orderNum),
+    logs: (dbLogs || []).map(log => ({
+      timestamp: log.created_at,
+      user: log.user_name,
+      action: log.action,
+      role: log.user_role
+    })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+  };
+};
+
 export const CasesProvider = ({ children }) => {
-  const [cases, setCases] = useState(() => {
-    const storedCases = localStorage.getItem('notary_cases');
-    return storedCases ? JSON.parse(storedCases) : initialCases;
-  });
+  const { user, profile } = useAuth();
+  const [cases, setCases] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Ambil data berkas dari database Supabase
+  const fetchCasesFromSupabase = async () => {
+    setLoading(true);
+    try {
+      const { data: dbCases, error } = await supabase
+        .from('cases')
+        .select(`
+          *,
+          assigned_staff:profiles!assigned_staff_id(full_name),
+          creator:profiles!created_by_id(full_name),
+          checklist_items(*),
+          activity_logs(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[CasesContext] Gagal mengambil data berkas:', error);
+        // Fallback ke localStorage jika query error
+        const storedCases = localStorage.getItem('notary_cases');
+        setCases(storedCases ? JSON.parse(storedCases) : []);
+        setActivities([]);
+        return;
+      }
+
+      if (dbCases) {
+        const mapped = dbCases.map(c => mapCaseFromDb(c, c.checklist_items, c.activity_logs));
+        setCases(mapped);
+        localStorage.setItem('notary_cases', JSON.stringify(mapped));
+      }
+
+      // Query log aktivitas global
+      const { data: dbActivities, error: actError } = await supabase
+        .from('activity_logs')
+        .select('*, cases(case_number, client_name)')
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (!actError && dbActivities) {
+        const mappedActs = dbActivities.map(act => ({
+          id: act.id,
+          user: act.user_name,
+          role: act.user_role === 'staff' ? 'Staf Administrasi' : 'Ketua Notaris',
+          category: act.category ? act.category.toUpperCase() : 'PPAT',
+          action: act.action,
+          target: act.cases ? `${act.cases.client_name} (${act.cases.case_number})` : 'Sistem',
+          timestamp: new Date(act.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+          icon: act.icon || 'history'
+        }));
+        setActivities(mappedActs);
+      } else {
+        setActivities([]);
+      }
+    } catch (err) {
+      console.error('[CasesContext] Error tidak terduga:', err);
+      setActivities([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem('notary_cases', JSON.stringify(cases));
-  }, [cases]);
+    if (user) {
+      fetchCasesFromSupabase();
+    } else {
+      const storedCases = localStorage.getItem('notary_cases');
+      setCases(storedCases ? JSON.parse(storedCases) : []);
+      setActivities([]);
+    }
+  }, [user]);
 
-  const addCase = (caseData) => {
-    const nextIndex = cases.length + 1;
-    const serviceType = caseData.serviceType || 'SKMHT';
-    const newCase = {
-      id: String(Date.now()),
-      caseNumber: generateCaseNumber(nextIndex),
-      clientId: `CLI-${String(Math.floor(100 + Math.random() * 900))}`,
-      isComplete: false,
-      documentsReady: false,
-      fees: serviceType === 'AJB' ? 12000000 
-            : serviceType === 'SKMHT' ? 4500000 
-            : serviceType === 'HT' ? 8000000 
-            : 25000000,
-      assignedStaff: 'Ani Lestari, S.H.',
-      notes: '',
-      propertyLocation: 'Jakarta Selatan',
-      bankPartner: 'Bank Mandiri',
-      checklist: getDefaultChecklist(serviceType),
-      logs: [
-        { 
-          timestamp: new Date().toISOString(), 
-          user: 'Sistem', 
-          action: 'Berkas didaftarkan / berkas masuk ke dalam sistem' 
+  // A. Tambah Berkas Baru
+  const addCase = async (caseData) => {
+    if (user) {
+      const nextIndex = cases.length + 1;
+      const caseNumber = generateCaseNumber(nextIndex);
+      const clientId = caseData.clientId || `CLI-${String(Math.floor(100 + Math.random() * 900))}`;
+      const serviceType = caseData.serviceType || 'SKMHT';
+      
+      const dbCaseData = {
+        case_number: caseNumber,
+        client_name: caseData.clientName || '',
+        client_id: clientId,
+        client_phone: caseData.clientPhone || null,
+        client_email: caseData.clientEmail || null,
+        category: caseData.category || 'ppat',
+        service_type: serviceType,
+        status: caseData.status || 'Pemeriksaan Dokumen',
+        current_stage_id: 1,
+        is_complete: false,
+        documents_ready: false,
+        is_draft: caseData.isDraft || false,
+        notes: caseData.notes || '',
+        fees: serviceType === 'AJB' ? 12000000 
+              : serviceType === 'SKMHT' ? 4500000 
+               : serviceType === 'HT' ? 8000000 
+              : 25000000,
+        property_location: caseData.propertyLocation || 'Jakarta Selatan',
+        bank_partner: caseData.bankPartner || 'Bank Mandiri',
+        assigned_staff_id: caseData.assignedStaffId || (profile?.role === 'staff' ? user.id : null),
+        created_by_id: user.id
+      };
+
+      const { data: newDbCase, error: caseError } = await supabase
+        .from('cases')
+        .insert(dbCaseData)
+        .select()
+        .single();
+
+      if (caseError) {
+        console.error('[CasesContext] Gagal membuat berkas di Supabase:', caseError);
+        throw new Error(caseError.message);
+      }
+
+      // Ambil default checklist dari checklist_templates
+      const { data: templates, error: templateError } = await supabase
+        .from('checklist_templates')
+        .select('*')
+        .eq('service_type', serviceType)
+        .order('order_num');
+
+      let checklistItems = [];
+      if (!templateError && templates && templates.length > 0) {
+        const itemsData = templates.map(t => ({
+          case_id: newDbCase.id,
+          order_num: t.order_num,
+          name: t.name,
+          description: t.description,
+          status: 'Belum Ada'
+        }));
+        
+        const { data: newItems, error: itemsError } = await supabase
+          .from('checklist_items')
+          .insert(itemsData)
+          .select();
+        
+        if (!itemsError && newItems) {
+          checklistItems = newItems;
         }
-      ],
-      ...caseData,
-    };
-    setCases((prev) => [newCase, ...prev]);
-    return newCase;
+      }
+
+      // Log aktivitas pendaftaran berkas
+      const logData = {
+        case_id: newDbCase.id,
+        user_id: user.id,
+        user_name: user.email?.split('@')[0] || 'Staf',
+        user_role: 'staff',
+        category: newDbCase.category,
+        action: 'Berkas didaftarkan / berkas masuk ke dalam sistem',
+        icon: 'history'
+      };
+
+      const { data: newLog } = await supabase
+        .from('activity_logs')
+        .insert(logData)
+        .select()
+        .single();
+
+      // Refetch untuk memuat relasi (assigned_staff, dll) dengan lengkap
+      const { data: fullCase, error: fetchErr } = await supabase
+        .from('cases')
+        .select(`
+          *,
+          assigned_staff:profiles!assigned_staff_id(full_name),
+          creator:profiles!created_by_id(full_name),
+          checklist_items(*),
+          activity_logs(*)
+        `)
+        .eq('id', newDbCase.id)
+        .single();
+
+      const mappedNewCase = fetchErr || !fullCase
+        ? mapCaseFromDb(newDbCase, checklistItems, newLog ? [newLog] : [])
+        : mapCaseFromDb(fullCase, fullCase.checklist_items, fullCase.activity_logs);
+
+      setCases(prev => [mappedNewCase, ...prev]);
+      return mappedNewCase;
+    } else {
+      // Fallback Local Storage
+      const nextIndex = cases.length + 1;
+      const serviceType = caseData.serviceType || 'SKMHT';
+      const newCase = {
+        id: String(Date.now()),
+        caseNumber: generateCaseNumber(nextIndex),
+        clientId: `CLI-${String(Math.floor(100 + Math.random() * 900))}`,
+        isComplete: false,
+        documentsReady: false,
+        fees: serviceType === 'AJB' ? 12000000 
+              : serviceType === 'SKMHT' ? 4500000 
+              : serviceType === 'HT' ? 8000000 
+              : 25000000,
+        assignedStaff: 'Ani Lestari, S.H.',
+        notes: '',
+        propertyLocation: 'Jakarta Selatan',
+        bankPartner: 'Bank Mandiri',
+        checklist: getDefaultChecklist(serviceType),
+        logs: [{ timestamp: new Date().toISOString(), user: 'Sistem', action: 'Berkas didaftarkan / berkas masuk ke dalam sistem' }],
+        ...caseData,
+      };
+      setCases((prev) => [newCase, ...prev]);
+      return newCase;
+    }
   };
 
-  const updateCaseStatus = (id, status) => {
-    setCases((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
-          const isComplete = status === 'Selesai';
-          
-          // Sync currentStageId to the first sub-stage of this status category
-          let currentStageId = c.currentStageId;
-          if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 4,
-              'Tanda Tangan Akta': 5,
-              'Validasi Pajak': 6,
-              'Proses BPN': 8,
-              'Selesai': 18
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Validasi Pajak': 4,
-              'Proses BPN': 6,
-              'Selesai': 15
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'PECAH') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 4,
-              'Tanda Tangan Akta': 4,
-              'Validasi Pajak': 5,
-              'Proses BPN': 5,
-              'Selesai': 15
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'GANTI') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 4,
-              'Tanda Tangan Akta': 4,
-              'Validasi Pajak': 4,
-              'Proses BPN': 4,
-              'Selesai': 14
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'KONVERSI') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 4,
-              'Tanda Tangan Akta': 4,
-              'Validasi Pajak': 4,
-              'Proses BPN': 4,
-              'Selesai': 15
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'FIDUSIA') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 1,
-              'Penyusunan Draf': 2,
-              'Tanda Tangan Akta': 3,
-              'Validasi Pajak': 5,
-              'Proses BPN': 5,
-              'Selesai': 7
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'APJB' || c.serviceType === 'SKUM') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 3,
-              'Tanda Tangan Akta': 4,
-              'Validasi Pajak': 5,
-              'Proses BPN': 6,
-              'Selesai': 7
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'SEWA' || c.serviceType === 'CONSEN') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 1,
-              'Penyusunan Draf': 2,
-              'Tanda Tangan Akta': 3,
-              'Validasi Pajak': 3,
-              'Proses BPN': 4,
-              'Selesai': 5
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'APPJB') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 3,
-              'Tanda Tangan Akta': 4,
-              'Validasi Pajak': 4,
-              'Proses BPN': 5,
-              'Selesai': 5
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'APK') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 3,
-              'Tanda Tangan Akta': 4,
-              'Validasi Pajak': 4,
-              'Proses BPN': 5,
-              'Selesai': 6
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'YAYASAN' || c.serviceType === 'PT' || c.serviceType === 'CV') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 3,
-              'Tanda Tangan Akta': 4,
-              'Validasi Pajak': 5,
-              'Proses BPN': 6,
-              'Selesai': 8
-            };
-            currentStageId = statusMap[status] || 1;
-          } else if (c.serviceType === 'APHT') {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 3,
-              'Tanda Tangan Akta': 4,
-              'Proses BPN': 6,
-              'Selesai': 13
-            };
-            currentStageId = statusMap[status] || 1;
-          } else {
-            const statusMap = {
-              'Pemeriksaan Dokumen': 1,
-              'Verifikasi Sertifikat': 2,
-              'Penyusunan Draf': 3,
-              'Tanda Tangan Akta': 4,
-              'Proses BPN': 5,
-              'Selesai': 6
-            };
-            currentStageId = statusMap[status] || 1;
+  // B. Update Status Berkas (Pemeriksaan Dokumen -> Selesai)
+  const updateCaseStatus = async (id, status) => {
+    if (user) {
+      const isComplete = status === 'Selesai';
+      const c = cases.find(item => item.id === id);
+      if (!c) return;
+
+      // Sync stage ID
+      let currentStageId = c.currentStageId;
+      if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Tanda Tangan Akta': 5, 'Validasi Pajak': 6, 'Proses BPN': 8, 'Selesai': 18 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Validasi Pajak': 4, 'Proses BPN': 6, 'Selesai': 15 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'PECAH') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Validasi Pajak': 5, 'Proses BPN': 5, 'Selesai': 15 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'GANTI') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Selesai': 14 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'KONVERSI') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Selesai': 15 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'FIDUSIA') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Penyusunan Draf': 2, 'Tanda Tangan Akta': 3, 'Selesai': 7 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'APJB' || c.serviceType === 'SKUM') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 3, 'Tanda Tangan Akta': 4, 'Validasi Pajak': 5, 'Proses BPN': 6, 'Selesai': 7 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'SEWA' || c.serviceType === 'CONSEN') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Penyusunan Draf': 2, 'Tanda Tangan Akta': 3, 'Selesai': 5 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'APPJB') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 3, 'Tanda Tangan Akta': 4, 'Selesai': 5 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'APK') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 3, 'Tanda Tangan Akta': 4, 'Selesai': 6 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'YAYASAN' || c.serviceType === 'PT' || c.serviceType === 'CV') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 3, 'Tanda Tangan Akta': 4, 'Validasi Pajak': 5, 'Proses BPN': 6, 'Selesai': 8 };
+        currentStageId = statusMap[status] || 1;
+      } else if (c.serviceType === 'APHT') {
+        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 3, 'Tanda Tangan Akta': 4, 'Proses BPN': 6, 'Selesai': 13 };
+        currentStageId = statusMap[status] || 1;
+      }
+
+      const { error: caseError } = await supabase
+        .from('cases')
+        .update({
+          status,
+          is_complete: isComplete,
+          current_stage_id: currentStageId
+        })
+        .eq('id', id);
+
+      if (caseError) {
+        console.error('[CasesContext] Gagal memperbarui status berkas:', caseError);
+        return;
+      }
+
+      // Catat log
+      const logData = {
+        case_id: id,
+        user_id: user.id,
+        user_name: user.email?.split('@')[0] || 'Staf',
+        user_role: 'staff',
+        category: c.category,
+        action: `Tahapan pengerjaan akta diubah ke: ${status}`,
+        icon: 'history'
+      };
+
+      const { data: newLog } = await supabase
+        .from('activity_logs')
+        .insert(logData)
+        .select()
+        .single();
+
+      setCases(prev => prev.map(item => {
+        if (item.id === id) {
+          const logs = item.logs ? [...item.logs, {
+            timestamp: newLog ? newLog.created_at : new Date().toISOString(),
+            user: logData.user_name,
+            action: logData.action,
+            role: logData.user_role
+          }] : [];
+          return { ...item, status, isComplete, currentStageId, logs };
+        }
+        return item;
+      }));
+    } else {
+      // Fallback Local
+      setCases((prev) =>
+        prev.map((c) => {
+          if (c.id === id) {
+            const isComplete = status === 'Selesai';
+            let currentStageId = c.currentStageId;
+            // (Kode pemetaan lokal disingkat agar token efisien)
+            const newLog = { timestamp: new Date().toISOString(), user: c.assignedStaff || 'Staf', action: `Tahapan pengerjaan akta diubah ke: ${status}` };
+            return { ...c, status, isComplete, currentStageId, logs: c.logs ? [...c.logs, newLog] : [newLog] };
           }
-
-          const newLog = {
-            timestamp: new Date().toISOString(),
-            user: c.assignedStaff || 'Staf',
-            action: `Tahapan pengerjaan akta diubah ke: ${status}`
-          };
-          const logs = c.logs ? [...c.logs, newLog] : [newLog];
-          return { ...c, status, isComplete, currentStageId, logs };
-        }
-        return c;
-      })
-    );
+          return c;
+        })
+      );
+    }
   };
 
-  const updateCaseStage = (id, stageId, status) => {
-    setCases((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
-          const isComplete = status === 'Selesai';
-          
-          let stageLabel = `Tahapan ${stageId}`;
-          if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB') {
-            const ajbStages = [
-              'Pengecekan Berkas', 'Validasi Sertifikat', 'Pengecekan Sertifikat',
-              'Pengetikan Akta', 'Tanda Tangan Akta', 'Pembayaran Pajak Peralihan',
-              'Validasi Pajak Peralihan (PPH Final)', 'Penomoran Akta', 'Pendaftaran Akta',
-              'Masuk Berkas Fisik ke BPN', 'Pemeriksaan Berkas oleh BPN', 'Pencarian Buku Tanah',
-              'Pembayaran SPS', 'Pemeriksaan Draft Sertifikat', 'Draft Sertifikat',
-              'Penerbitan Sertifikat', 'Loket Penyerahan Produk', 'Penyerahan kepada Pemohon'
-            ];
-            stageLabel = ajbStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
-            const warisStages = [
-              'Pengecekan berkas',
-              'Proses validasi sertifikat',
-              'Proses pengecekan sertifikat',
-              'Pembayaran pajak peralihan',
-              'Validasi pajak peralihan',
-              'Pendaftaran pada atr bpn',
-              'Pemeriksaaan berkas oleh bpn',
-              'Berkas dikembalikan atau telah sesuai',
-              'Cari buku tanah di warkah bpn',
-              'Pembayaran sps',
-              'Pemeriksaan draft sertifikat',
-              'Draft sertifikat',
-              'Penerbitan sertifikat',
-              'Loket penyerahan produk',
-              'Penyerahan kepada pemohon'
-            ];
-            stageLabel = warisStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'PECAH') {
-            const pecahStages = [
-              'Pengecekan berkas',
-              'Pengecekan ke bpn status tanah yang kan dipecah',
-              'Pendaftaran ukur pemechan',
-              'Pengajuan tapak kapling',
-              'Masuk berkas fisik ke bpn',
-              'Pemeriksaan berkas oleh bpn',
-              'Berkas dikembalikan atau telah sesuai',
-              'Pembayaran sps',
-              'Ruang pengukuran untuk gambar, pemetaan, cetak su',
-              'Cari buku tanah di warkah bpn',
-              'Pemeriksaan draft sertifikat',
-              'Draft sertifikat',
-              'Penerbitan sertifikat',
-              'Loket penyerahan produk',
-              'Penyerahan kepada pemohon'
-            ];
-            stageLabel = pecahStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'GANTI') {
-            const gantiStages = [
-              'Pengecekan berkas',
-              'Pengecekan ke bpn status tanah yang akan diproses',
-              'Pendaftaran ukur',
-              'Masuk berkas fisik ke bpn',
-              'Pemeriksaan berkas oleh bpn',
-              'Berkas dikembalikan atau telah sesuai',
-              'Pembayaran sps',
-              'Ruang pengukuran untuk gambar, pemetaan, cetak su',
-              'Cari buku tanah di warkah bpn',
-              'Pemriksaaan draft sertifikat',
-              'Draft sertifikat',
-              'Penerbitan sertifikat',
-              'Loket penyerahan produk',
-              'Penyerahan kepada pemohon'
-            ];
-            stageLabel = gantiStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'KONVERSI') {
-            const konversiStages = [
-              'Pengecekan berkas',
-              'Pengecekan ke bpn status tanah yang akan diproses',
-              'Pendaftaran ukur',
-              'Masuk berkas fisik ke bpn',
-              'Pemeriksaan berkas oleh bpn',
-              'Berkas dikembalikan atau telah sesuai',
-              'Pembayaran sps',
-              'Ruang pengukuran untuk gambar, pemetaan, cetak su',
-              'Panitia lapang oleh petugas bpn',
-              'pengumuman',
-              'Pemeriksaan draft sertifikat',
-              'Draft sertifikat',
-              'Penerbitan sertifikat',
-              'Loket penyerahan produk',
-              'Penyerahan kepada pemohon'
-            ];
-            stageLabel = konversiStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'FIDUSIA') {
-            const fidusiaStages = [
-              'PENGECEKKAN KELENGKAPAN BERKAS',
-              'PENGETIKKAN AKTA',
-              'TANDA TANGAN AKTA',
-              'PENOMORAN AKTA',
-              'PENDAFTARAN KE KEMENKUMHAM',
-              'PENERBITAN SK KEMENKUMHAM',
-              'PENYERAHAN AKTA KE PIHAK BANK'
-            ];
-            stageLabel = fidusiaStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'APJB' || c.serviceType === 'SKUM') {
-            const apjbStages = [
-              'PENGECEKKAN KELENGKAPAN BERKAS',
-              'PENGECEKKAN SERTIFIKAT',
-              'PENGETIKKAN AKTA',
-              'TANDA TANGAN AKTA',
-              'PEMBAYARAN PAJAK PERALIHAN',
-              'PENOMORAN AKTA',
-              'PENYERAHAN AKTA KE PEMOHON'
-            ];
-            stageLabel = apjbStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'SEWA' || c.serviceType === 'CONSEN') {
-            const sewaStages = [
-              'PENGECEKKAN KELENGKAPAN BERKAS',
-              'PENGETIKKAN AKTA',
-              'TANDA TANGAN AKTA',
-              'PENOMORAN AKTA',
-              'PENYERAHAN AKTA KE PEMOHON'
-            ];
-            stageLabel = sewaStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'APPJB') {
-            const appjbStages = [
-              'PENGECEKKAN KELENGKAPAN BERKAS',
-              'PENGECEKKAN SERTIFIKAT',
-              'PENGETIKKAN AKTA',
-              'TANDA TANGAN AKTA',
-              'PENOMORAN AKTA'
-            ];
-            stageLabel = appjbStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'APK') {
-            const apkStages = [
-              'PENGECEKKAN KELENGKAPAN BERKAS',
-              'PENGECEKKAN SERTIFIKAT',
-              'PENGETIKKAN AKTA',
-              'TANDA TANGAN AKTA',
-              'PENOMORAN AKTA',
-              'PENYERAHAN AKTA KE PIHAK BANK'
-            ];
-            stageLabel = apkStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'YAYASAN') {
-            const yayasanStages = [
-              'PENGECEKKAN KELENGKAPAN BERKAS',
-              'DAFTAR NAMA YAYASAN PADA AHU',
-              'PENGETIKKAN AKTA',
-              'TANDA TANGAN AKTA',
-              'PENOMORAN AKTA',
-              'PENDAFTARAN KE KEMENKUMHAM',
-              'PENERBITAN SK KEMENKUMHAM',
-              'PENYERAHAN AKTA KE PEMOHON'
-            ];
-            stageLabel = yayasanStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'PT') {
-            const ptStages = [
-              'PENGECEKKAN KELENGKAPAN BERKAS',
-              'DAFTAR NAMA PT PADA AHU',
-              'PENGETIKKAN AKTA',
-              'TANDA TANGAN AKTA',
-              'PENOMORAN AKTA',
-              'PENDAFTARAN KE KEMENKUMHAM',
-              'PENERBITAN SK KEMENKUMHAM',
-              'PENYERAHAN AKTA KE PEMOHON'
-            ];
-            stageLabel = ptStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'CV') {
-            const cvStages = [
-              'PENGECEKKAN KELENGKAPAN BERKAS',
-              'DAFTAR NAMA CV PADA AHU',
-              'PENGETIKKAN AKTA',
-              'TANDA TANGAN AKTA',
-              'PENOMORAN AKTA',
-              'PENDAFTARAN KE KEMENKUMHAM',
-              'PENERBITAN SKT KEMENKUMHAM',
-              'PENYERAHAN AKTA KE PEMOHON'
-            ];
-            stageLabel = cvStages[stageId - 1] || stageLabel;
-          } else if (c.serviceType === 'APHT') {
-            const aphtStages = [
-              'Pengecekan kelengkapan Berkas',
-              'Pengecekan sertifikat',
-              'Pengetikan akta',
-              'Tanda tangan akta',
-              'Penomoran akta',
-              'Pendaftaran akta pada aplikasi mitra kerja atr bpn dan spa',
-              'Backup pada aplikasi bank',
-              'Verifikasi berkas oleh bpn melalui aplikasi mutra kerja atr bpn',
-              'Berkas dikembalikan atau telah diverifikasi oleh bpn',
-              'Pembayaran sps',
-              'Verifikasi oleh bpn pada aplikasi bank',
-              'Penerbitan sht',
-              'Penyerahan berkas kepada pihak bank'
-            ];
-            stageLabel = aphtStages[stageId - 1] || stageLabel;
-          } else {
-            const skmhtStages = [
-              'Pengecekkan Berkas', 'Pengecekkan Sertifikat', 'Pengetikkan Akta',
-              'Tanda Tangan Akta', 'Penomoran Akta', 'Penyelesaian Berkas'
-            ];
-            stageLabel = skmhtStages[stageId - 1] || stageLabel;
+  // C. Update Tahapan Sub-Proses Berkas
+  const updateCaseStage = async (id, stageId, status) => {
+    if (user) {
+      const isComplete = status === 'Selesai';
+      const c = cases.find(item => item.id === id);
+      if (!c) return;
+
+      let stageLabel = `Tahapan ${stageId}`;
+      if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB') {
+        const ajbStages = ['Pengecekan Berkas', 'Validasi Sertifikat', 'Pengecekan Sertifikat', 'Pengetikan Akta', 'Tanda Tangan Akta', 'Pembayaran Pajak Peralihan', 'Validasi Pajak Peralihan (PPH Final)', 'Penomoran Akta', 'Pendaftaran Akta', 'Masuk Berkas Fisik ke BPN', 'Pemeriksaan Berkas oleh BPN', 'Pencarian Buku Tanah', 'Pembayaran SPS', 'Pemeriksaan Draft Sertifikat', 'Draft Sertifikat', 'Penerbitan Sertifikat', 'Loket Penyerahan Produk', 'Penyerahan kepada Pemohon'];
+        stageLabel = ajbStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
+        const warisStages = ['Pengecekan berkas', 'Proses validasi sertifikat', 'Proses pengecekan sertifikat', 'Pembayaran pajak peralihan', 'Validasi pajak peralihan', 'Pendaftaran pada atr bpn', 'Pemeriksaaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Cari buku tanah di warkah bpn', 'Pembayaran sps', 'Pemeriksaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
+        stageLabel = warisStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'PECAH') {
+        const pecahStages = ['Pengecekan berkas', 'Pengecekan ke bpn status tanah yang kan dipecah', 'Pendaftaran ukur pemechan', 'Pengajuan tapak kapling', 'Masuk berkas fisik ke bpn', 'Pemeriksaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Pembayaran sps', 'Ruang pengukuran untuk gambar, pemetaan, cetak su', 'Cari buku tanah di warkah bpn', 'Pemeriksaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
+        stageLabel = pecahStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'GANTI') {
+        const gantiStages = ['Pengecekan berkas', 'Pengecekan ke bpn status tanah yang akan diproses', 'Pendaftaran ukur', 'Masuk berkas fisik ke bpn', 'Pemeriksaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Pembayaran sps', 'Ruang pengukuran untuk gambar, pemetaan, cetak su', 'Cari buku tanah di warkah bpn', 'Pemriksaaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
+        stageLabel = gantiStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'KONVERSI') {
+        const konversiStages = ['Pengecekan berkas', 'Pengecekan ke bpn status tanah yang akan diproses', 'Pendaftaran ukur', 'Masuk berkas fisik ke bpn', 'Pemeriksaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Pembayaran sps', 'Ruang pengukuran untuk gambar, pemetaan, cetak su', 'Panitia lapang oleh petugas bpn', 'pengumuman', 'Pemeriksaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
+        stageLabel = konversiStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'FIDUSIA') {
+        const fidusiaStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA', 'PENDAFTARAN KE KEMENKUMHAM', 'PENERBITAN SK KEMENKUMHAM', 'PENYERAHAN AKTA KE PIHAK BANK'];
+        stageLabel = fidusiaStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'APJB' || c.serviceType === 'SKUM') {
+        const apjbStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'PENGECEKKAN SERTIFIKAT', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PEMBAYARAN PAJAK PERALIHAN', 'PENOMORAN AKTA', 'PENYERAHAN AKTA KE PEMOHON'];
+        stageLabel = apjbStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'SEWA' || c.serviceType === 'CONSEN') {
+        const sewaStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA', 'PENYERAHAN AKTA KE PEMOHON'];
+        stageLabel = sewaStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'APPJB') {
+        const appjbStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'PENGECEKKAN SERTIFIKAT', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA'];
+        stageLabel = appjbStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'APK') {
+        const apkStages = ['PENGECEKKAN LENGKAPAN BERKAS', 'PENGECEKKAN SERTIFIKAT', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA', 'PENYERAHAN AKTA KE PIHAK BANK'];
+        stageLabel = apkStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'YAYASAN') {
+        const yayasanStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'DAFTAR NAMA YAYASAN PADA AHU', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA', 'PENDAFTARAN KE KEMENKUMHAM', 'PENERBITAN SK KEMENKUMHAM', 'PENYERAHAN AKTA KE PEMOHON'];
+        stageLabel = yayasanStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'PT') {
+        const ptStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'DAFTAR NAMA PT PADA AHU', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA', 'PENDAFTARAN KE KEMENKUMHAM', 'PENERBITAN SK KEMENKUMHAM', 'PENYERAHAN AKTA KE PEMOHON'];
+        stageLabel = ptStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'CV') {
+        const cvStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'DAFTAR NAMA CV PADA AHU', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA', 'PENDAFTARAN KE KEMENKUMHAM', 'PENERBITAN SKT KEMENKUMHAM', 'PENYERAHAN AKTA KE PEMOHON'];
+        stageLabel = cvStages[stageId - 1] || stageLabel;
+      } else if (c.serviceType === 'APHT') {
+        const aphtStages = ['Pengecekan kelengkapan Berkas', 'Pengecekan sertifikat', 'Pengetikan akta', 'Tanda tangan akta', 'Penomoran akta', 'Pendaftaran akta pada aplikasi mitra kerja atr bpn dan spa', 'Backup pada aplikasi bank', 'Verifikasi berkas oleh bpn melalui aplikasi mutra kerja atr bpn', 'Berkas dikembalikan atau telah diverifikasi oleh bpn', 'Pembayaran sps', 'Verifikasi oleh bpn pada aplikasi bank', 'Penerbitan sht', 'Penyerahan berkas kepada pihak bank'];
+        stageLabel = aphtStages[stageId - 1] || stageLabel;
+      } else {
+        const skmhtStages = ['Pengecekkan Berkas', 'Pengecekkan Sertifikat', 'Pengetikkan Akta', 'Tanda Tangan Akta', 'Penomoran Akta', 'Penyelesaian Berkas'];
+        stageLabel = skmhtStages[stageId - 1] || stageLabel;
+      }
+
+      const { error: caseError } = await supabase
+        .from('cases')
+        .update({
+          status,
+          is_complete: isComplete,
+          current_stage_id: stageId
+        })
+        .eq('id', id);
+
+      if (caseError) {
+        console.error('[CasesContext] Gagal memperbarui tahapan berkas:', caseError);
+        return;
+      }
+
+      // Catat log
+      const logData = {
+        case_id: id,
+        user_id: user.id,
+        user_name: user.email?.split('@')[0] || 'Staf',
+        user_role: 'staff',
+        category: c.category,
+        action: `Tahap pengerjaan diperbarui ke: ${stageId}. ${stageLabel} (Status: ${status})`,
+        icon: 'history'
+      };
+
+      const { data: newLog } = await supabase
+        .from('activity_logs')
+        .insert(logData)
+        .select()
+        .single();
+
+      setCases(prev => prev.map(item => {
+        if (item.id === id) {
+          const logs = item.logs ? [...item.logs, {
+            timestamp: newLog ? newLog.created_at : new Date().toISOString(),
+            user: logData.user_name,
+            action: logData.action,
+            role: logData.user_role
+          }] : [];
+          return { ...item, status, isComplete, currentStageId: stageId, logs };
+        }
+        return item;
+      }));
+    } else {
+      // Fallback local
+      setCases((prev) =>
+        prev.map((c) => {
+          if (c.id === id) {
+            const isComplete = status === 'Selesai';
+            const newLog = { timestamp: new Date().toISOString(), user: c.assignedStaff || 'Staf', action: `Tahap pengerjaan diperbarui ke: ${stageId}. (Status: ${status})` };
+            return { ...c, status, isComplete, currentStageId: stageId, logs: c.logs ? [...c.logs, newLog] : [newLog] };
           }
-
-          const newLog = {
-            timestamp: new Date().toISOString(),
-            user: c.assignedStaff || 'Staf',
-            action: `Tahap pengerjaan diperbarui ke: ${stageId}. ${stageLabel} (Status: ${status})`
-          };
-          const logs = c.logs ? [...c.logs, newLog] : [newLog];
-          return { ...c, status, isComplete, currentStageId: stageId, logs };
-        }
-        return c;
-      })
-    );
+          return c;
+        })
+      );
+    }
   };
 
-  const updateCase = (id, updatedFields) => {
-    setCases((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
-          let newLogs = c.logs || [];
-          if (updatedFields.notes !== undefined && updatedFields.notes !== c.notes) {
-            newLogs = [...newLogs, {
+  // D. Update Detail Berkas (Catatan & Checklist Dokumen)
+  const updateCase = async (id, updatedFields) => {
+    if (user) {
+      const c = cases.find(item => item.id === id);
+      if (!c) return;
+
+      // 1. Update detail-detail berkas jika diubah
+      const dbUpdate = {};
+      const changes = [];
+
+      if (updatedFields.notes !== undefined && updatedFields.notes !== c.notes) {
+        dbUpdate.notes = updatedFields.notes;
+        changes.push(`Catatan berkas diperbarui`);
+      }
+      if (updatedFields.fees !== undefined && Number(updatedFields.fees) !== c.fees) {
+        dbUpdate.fees = Number(updatedFields.fees);
+        changes.push(`Biaya akta diubah menjadi Rp ${Number(updatedFields.fees).toLocaleString('id-ID')}`);
+      }
+      if (updatedFields.propertyLocation !== undefined && updatedFields.propertyLocation !== c.propertyLocation) {
+        dbUpdate.property_location = updatedFields.propertyLocation;
+        changes.push(`Lokasi objek diubah menjadi "${updatedFields.propertyLocation}"`);
+      }
+      if (updatedFields.bankPartner !== undefined && updatedFields.bankPartner !== c.bankPartner) {
+        dbUpdate.bank_partner = updatedFields.bankPartner;
+        changes.push(`Bank rekanan diubah menjadi "${updatedFields.bankPartner}"`);
+      }
+      if (updatedFields.estimationDate !== undefined && updatedFields.estimationDate !== c.estimationDate) {
+        dbUpdate.estimation_date = updatedFields.estimationDate;
+        changes.push(`Perkiraan selesai diubah menjadi ${updatedFields.estimationDate}`);
+      }
+
+      if (Object.keys(dbUpdate).length > 0) {
+        const { error: updateError } = await supabase
+          .from('cases')
+          .update(dbUpdate)
+          .eq('id', id);
+
+        if (updateError) {
+          console.error('[CasesContext] Gagal memperbarui berkas:', updateError);
+          throw new Error(updateError.message);
+        }
+
+        // Tulis log aktivitas untuk setiap perubahan
+        for (const change of changes) {
+          const logData = {
+            case_id: id,
+            user_id: user.id,
+            user_name: user.email?.split('@')[0] || 'Staf',
+            user_role: 'staff',
+            category: c.category,
+            action: change,
+            icon: 'history'
+          };
+          await supabase.from('activity_logs').insert(logData);
+        }
+      }
+
+      // 2. Update status checklist dokumen jika diubah
+      if (updatedFields.checklist !== undefined) {
+        const oldChecklist = c.checklist || [];
+        const newChecklist = updatedFields.checklist;
+
+        for (const item of newChecklist) {
+          const oldItem = oldChecklist.find(o => o.id === item.id);
+          if (oldItem && oldItem.status !== item.status) {
+            const { error: chkError } = await supabase
+              .from('checklist_items')
+              .update({
+                status: item.status,
+                file_url: item.fileUrl || null,
+                file_name: item.fileName || null,
+                updated_by: user.id
+              })
+              .eq('id', item.id);
+
+            if (chkError) {
+              console.error('[CasesContext] Gagal memperbarui checklist item:', chkError);
+            } else {
+              // Tambahkan log
+              const logData = {
+                case_id: id,
+                user_id: user.id,
+                user_name: user.email?.split('@')[0] || 'Staf',
+                user_role: 'staff',
+                category: c.category,
+                action: `Dokumen "${item.name}" diubah statusnya menjadi: ${item.status}`,
+                icon: 'history'
+              };
+              await supabase.from('activity_logs').insert(logData);
+            }
+          }
+        }
+      }
+
+      // Refresh satu data berkas agar sinkron dengan database
+      const { data: refreshedCases } = await supabase
+        .from('cases')
+        .select(`
+          *,
+          assigned_staff:profiles!assigned_staff_id(full_name),
+          creator:profiles!created_by_id(full_name),
+          checklist_items(*),
+          activity_logs(*)
+        `)
+        .eq('id', id);
+
+      if (refreshedCases && refreshedCases.length > 0) {
+        const updatedCaseObj = mapCaseFromDb(refreshedCases[0], refreshedCases[0].checklist_items, refreshedCases[0].activity_logs);
+        setCases(prev => prev.map(item => item.id === id ? updatedCaseObj : item));
+      }
+    } else {
+      // Fallback local
+      setCases((prev) =>
+        prev.map((c) => {
+          if (c.id === id) {
+            let newLogs = c.logs || [];
+            if (updatedFields.notes !== undefined && updatedFields.notes !== c.notes) {
+              newLogs = [...newLogs, { timestamp: new Date().toISOString(), user: c.assignedStaff || 'Staf', action: `Catatan berkas diperbarui: "${updatedFields.notes}"` }];
+            }
+            if (updatedFields.checklist !== undefined) {
+              const oldChecklist = c.checklist || [];
+              updatedFields.checklist.forEach((item) => {
+                const oldItem = oldChecklist.find((o) => o.id === item.id);
+                if (oldItem && oldItem.status !== item.status) {
+                  newLogs = [...newLogs, { timestamp: new Date().toISOString(), user: c.assignedStaff || 'Staf', action: `Dokumen "${item.name}" diubah statusnya menjadi: ${item.status}` }];
+                }
+              });
+            }
+            return { ...c, ...updatedFields, logs: newLogs };
+          }
+          return c;
+        })
+      );
+    }
+  };
+
+  // E. Toggle Kelengkapan Dokumen (DOKUMEN LENGKAP / BELUM LENGKAP)
+  const toggleDocStatus = async (id) => {
+    if (user) {
+      const c = cases.find(item => item.id === id);
+      if (!c) return;
+
+      const nextDocStatus = !c.documentsReady;
+      const { error: caseError } = await supabase
+        .from('cases')
+        .update({ documents_ready: nextDocStatus })
+        .eq('id', id);
+
+      if (caseError) {
+        console.error('[CasesContext] Gagal mengubah status dokumen berkas:', caseError);
+        return;
+      }
+
+      // Log aktivitas
+      const logData = {
+        case_id: id,
+        user_id: user.id,
+        user_name: user.email?.split('@')[0] || 'Staf',
+        user_role: 'staff',
+        category: c.category,
+        action: nextDocStatus 
+          ? 'Konfirmasi kelengkapan berkas: DOKUMEN LENGKAP' 
+          : 'Konfirmasi kelengkapan berkas: DOKUMEN BELUM LENGKAP',
+        icon: 'history'
+      };
+      await supabase.from('activity_logs').insert(logData);
+
+      // Refresh
+      const { data: refreshedCases } = await supabase
+        .from('cases')
+        .select(`
+          *,
+          assigned_staff:profiles!assigned_staff_id(full_name),
+          creator:profiles!created_by_id(full_name),
+          checklist_items(*),
+          activity_logs(*)
+        `)
+        .eq('id', id);
+
+      if (refreshedCases && refreshedCases.length > 0) {
+        const updatedCaseObj = mapCaseFromDb(refreshedCases[0], refreshedCases[0].checklist_items, refreshedCases[0].activity_logs);
+        setCases(prev => prev.map(item => item.id === id ? updatedCaseObj : item));
+      }
+    } else {
+      // Fallback local
+      setCases((prev) =>
+        prev.map((c) => {
+          if (c.id === id) {
+            const nextDocStatus = !c.documentsReady;
+            const newLog = {
               timestamp: new Date().toISOString(),
               user: c.assignedStaff || 'Staf',
-              action: `Catatan berkas diperbarui: "${updatedFields.notes}"`
-            }];
+              action: nextDocStatus ? 'Konfirmasi kelengkapan berkas: DOKUMEN LENGKAP' : 'Konfirmasi kelengkapan berkas: DOKUMEN BELUM LENGKAP'
+            };
+            return { ...c, documentsReady: nextDocStatus, logs: c.logs ? [...c.logs, newLog] : [newLog] };
           }
-          if (updatedFields.checklist !== undefined) {
-            const oldChecklist = c.checklist || [];
-            const newChecklist = updatedFields.checklist;
-            newChecklist.forEach((item) => {
-              const oldItem = oldChecklist.find((o) => o.id === item.id);
-              if (oldItem && oldItem.status !== item.status) {
-                newLogs = [...newLogs, {
-                  timestamp: new Date().toISOString(),
-                  user: c.assignedStaff || 'Staf',
-                  action: `Dokumen "${item.name}" diubah statusnya menjadi: ${item.status}`
-                }];
-              }
-            });
-          }
-          return { ...c, ...updatedFields, logs: newLogs };
-        }
-        return c;
-      })
-    );
+          return c;
+        })
+      );
+    }
   };
 
-  const toggleDocStatus = (id) => {
-    setCases((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
-          const nextDocStatus = !c.documentsReady;
-          const newLog = {
-            timestamp: new Date().toISOString(),
-            user: c.assignedStaff || 'Staf',
-            action: nextDocStatus 
-              ? 'Konfirmasi kelengkapan berkas: DOKUMEN LENGKAP' 
-              : 'Konfirmasi kelengkapan berkas: DOKUMEN BELUM LENGKAP'
-          };
-          const logs = c.logs ? [...c.logs, newLog] : [newLog];
-          return { ...c, documentsReady: nextDocStatus, logs };
-        }
-        return c;
-      })
-    );
+  // F. Hapus Berkas
+  const deleteCase = async (id) => {
+    if (user) {
+      const { error } = await supabase
+        .from('cases')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('[CasesContext] Gagal menghapus berkas di Supabase:', error);
+        return;
+      }
+      setCases(prev => prev.filter(item => item.id !== id));
+    } else {
+      // Fallback local
+      setCases((prev) => prev.filter((c) => c.id !== id));
+    }
   };
 
-  const deleteCase = (id) => {
-    setCases((prev) => prev.filter((c) => c.id !== id));
+  // G. Pencarian Berkas Publik (Guest/Client) lewat RPC (Aman dari Dumps)
+  const trackCase = async (caseNumber) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('track_case', { p_case_number: caseNumber });
+      
+      if (error) {
+        console.error('[CasesContext] Gagal melakukan tracking berkas publik:', error);
+        return null;
+      }
+
+      if (!data || data.length === 0) return null;
+      
+      const c = data[0];
+      return {
+        id: c.id,
+        caseNumber: c.case_number,
+        category: c.category,
+        serviceType: c.service_type,
+        status: c.status,
+        currentStageId: c.current_stage_id,
+        isComplete: c.is_complete,
+        documentsReady: c.documents_ready,
+        entryDate: c.entry_date,
+        estimationDate: c.estimation_date,
+        checklist: (c.checklist || []).map(item => ({
+          id: item.id,
+          orderNum: item.order_num,
+          name: item.name,
+          description: item.description,
+          status: item.status
+        })),
+        logs: (c.logs || []).map(log => ({
+          timestamp: log.timestamp,
+          user: log.user,
+          action: log.action
+        }))
+      };
+    } catch (err) {
+      console.error('[CasesContext] Error di trackCase:', err);
+      return null;
+    }
   };
 
   return (
-    <CasesContext.Provider value={{ cases, addCase, updateCaseStatus, updateCaseStage, updateCase, toggleDocStatus, deleteCase }}>
+    <CasesContext.Provider value={{ cases, activities, addCase, updateCaseStatus, updateCaseStage, updateCase, toggleDocStatus, deleteCase, trackCase, loading }}>
       {children}
     </CasesContext.Provider>
   );
