@@ -14,28 +14,28 @@ export const OwnerDashboard = () => {
   const completedCount = cases.filter((c) => c.status === 'Selesai').length;
 
   return (
-    <div className="space-y-stack-lg font-sans">
+    <div className="space-y-8 font-sans">
       
       {/* Dashboard Header (24px - 30px size range) */}
-      <div className="mb-stack-lg flex justify-between items-end text-left">
+      <div className="mb-8 flex justify-between items-end text-left">
         <div>
-          <h2 className="text-[26px] font-bold text-text">Executive Overview</h2>
-          <p className="text-[12.5px] text-muted mt-1 font-medium">Real-time operational performance of NotaryDoc Pro.</p>
+          <h2 className="text-[30px] font-extrabold text-text tracking-tight">Executive Overview</h2>
+          <p className="text-[14px] text-muted mt-1.5 font-medium">Real-time operational performance of NotaryDoc Pro.</p>
         </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-body-md font-semibold text-[13px]">
-            <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+        <div className="flex gap-3">
+          <button className="flex items-center gap-2 px-5 h-11 border border-outline-variant rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-body-md font-semibold text-[14px]">
+            <span className="material-symbols-outlined text-[20px]">calendar_month</span>
             Last 30 Days
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-body-md font-semibold text-[13px]">
-            <span className="material-symbols-outlined text-[18px]">download</span>
+          <button className="flex items-center gap-2 px-5 h-11 border border-outline-variant rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-body-md font-semibold text-[14px]">
+            <span className="material-symbols-outlined text-[20px]">download</span>
             Export Report
           </button>
         </div>
       </div>
 
       {/* Bento Layout Container: Metric cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-gutter-grid">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         
         {/* KPI Card 1: Total Documents */}
         <MetricCard
@@ -66,21 +66,25 @@ export const OwnerDashboard = () => {
         />
 
         {/* KPI Card 4: Completion Rate */}
-        <div className="bg-surface-container-lowest border border-outline-variant p-card-padding rounded-xl shadow-sm text-left flex flex-col justify-between">
-          <div className="flex justify-between items-center mb-2">
-            <p className="text-label-sm text-on-surface-variant font-label-bold uppercase tracking-wider text-[11px] font-bold">
+        <div className="bg-surface-container-lowest border border-outline-variant p-7 rounded-xl shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-bl-full -mr-8 -mt-8 group-hover:scale-110 transition-transform"></div>
+          
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-[13px] text-on-surface-variant/80 font-semibold uppercase tracking-wider">
               Completion Rate
             </p>
-            <span className="text-primary font-bold text-[13px]">{totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%</span>
+            <span className="text-primary font-bold text-[14px]">{totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%</span>
           </div>
-          <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mb-4">Operational Goal</h3>
-          <div className="w-full bg-surface-container-high h-3 rounded-full overflow-hidden">
+          
+          <h3 className="font-bold text-[18px] text-on-surface mt-2 mb-3">Operational Goal</h3>
+          
+          <div className="w-full bg-surface-container-high h-4 rounded-full overflow-hidden">
             <div 
               className="bg-primary h-full rounded-full shadow-[0_0_8px_rgba(0,108,73,0.3)] transition-all duration-500" 
               style={{ width: `${totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%` }}
             />
           </div>
-          <p className="text-[10px] text-on-surface-variant mt-2 text-right">Target: 100% Completion</p>
+          <p className="text-[12px] text-on-surface-variant mt-3 text-right">Target: 100% Completion</p>
         </div>
       </div>
 

@@ -546,9 +546,8 @@ export const ClientTrackingPage = () => {
           </div>
         )}
         
-        <div className="mt-8 pt-4 border-t border-outline-variant flex justify-between text-[11px] text-on-surface-variant font-medium">
+        <div className="mt-8 pt-4 border-t border-outline-variant text-center text-[12px] text-on-surface-variant font-medium">
           <span>Notaris Digital &copy; 2026</span>
-          <a href="/login" className="text-primary hover:underline font-bold">Masuk Portal Staf</a>
         </div>
 
       </div>

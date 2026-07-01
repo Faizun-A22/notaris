@@ -21,33 +21,33 @@ export const MetricCard = ({ title, value, icon, change, changeText, color = 'pr
   }
 
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant p-card-padding rounded-xl shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-      <div className={`absolute right-0 top-0 w-24 h-24 ${decorBg} rounded-bl-full -mr-8 -mt-8 group-hover:scale-110 transition-transform`}></div>
+    <div className="bg-surface-container-lowest border border-outline-variant p-7 rounded-xl shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+      <div className={`absolute right-0 top-0 w-28 h-28 ${decorBg} rounded-bl-full -mr-8 -mt-8 group-hover:scale-110 transition-transform`}></div>
       
-      <div className="flex items-start justify-between mb-2">
-        <div className={`w-12 h-12 ${iconBg} rounded-lg flex items-center justify-center`}>
-          <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-14 h-14 ${iconBg} rounded-xl flex items-center justify-center shadow-sm`}>
+          <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
             {icon}
           </span>
         </div>
         {change && (
-          <span className={`${color === 'primary' ? 'text-on-surface-variant' : color === 'secondary' ? 'text-secondary' : 'text-error'} font-label-bold text-label-sm`}>
+          <span className={`${color === 'primary' ? 'text-primary' : color === 'secondary' ? 'text-secondary' : 'text-error'} font-bold text-[13px]`}>
             {change}
           </span>
         )}
       </div>
 
-      <p className="text-on-surface-variant font-label-bold text-label-sm uppercase tracking-wider">
+      <p className="text-on-surface-variant/80 font-semibold text-[13px] uppercase tracking-wider">
         {title}
       </p>
       
-      <h3 className={`font-headline-lg text-headline-lg ${titleColor} mt-1`}>
+      <h3 className={`text-[36px] font-extrabold tracking-tight leading-none ${titleColor} mt-2 mb-2`}>
         {value}
       </h3>
 
       {footerText && (
-        <div className="mt-4 pt-4 border-t border-outline-variant">
-          <p className="text-[10px] text-on-surface-variant">{footerText}</p>
+        <div className="mt-3 pt-3 border-t border-outline-variant">
+          <p className="text-[12px] font-medium text-on-surface-variant/80">{footerText}</p>
         </div>
       )}
     </div>
