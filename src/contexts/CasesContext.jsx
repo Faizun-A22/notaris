@@ -304,6 +304,8 @@ const mapCaseFromDb = (dbCase, dbChecklist = [], dbLogs = []) => {
     creatorName: dbCase.creator?.full_name || 'Sistem',
     createdAt: dbCase.created_at,
     updatedAt: dbCase.updated_at,
+    paymentStatus: dbCase.payment_status || 'Belum Lunas',
+    paidAmount: Number(dbCase.paid_amount || 0),
     checklist: (dbChecklist || []).map(item => ({
       id: item.id,
       orderNum: item.order_num,
@@ -422,14 +424,18 @@ export const CasesProvider = ({ children }) => {
         documents_ready: false,
         is_draft: caseData.isDraft || false,
         notes: caseData.notes || '',
-        fees: serviceType === 'AJB' ? 12000000 
+        fees: caseData.fees !== undefined ? Number(caseData.fees) : (serviceType === 'AJB' ? 12000000 
               : serviceType === 'SKMHT' ? 4500000 
                : serviceType === 'HT' ? 8000000 
-              : 25000000,
+              : 25000000),
         property_location: caseData.propertyLocation || 'Jakarta Selatan',
         bank_partner: caseData.bankPartner || 'Bank Mandiri',
         assigned_staff_id: caseData.assignedStaffId || (profile?.role === 'staff' ? user.id : null),
-        created_by_id: user.id
+        created_by_id: user.id,
+        entry_date: caseData.entryDate || null,
+        estimation_date: caseData.estimationDate || null,
+        payment_status: caseData.paymentStatus || 'Belum Lunas',
+        paid_amount: caseData.paidAmount !== undefined ? Number(caseData.paidAmount) : 0
       };
 
       const { data: newDbCase, error: caseError } = await supabase
@@ -780,8 +786,16 @@ export const CasesProvider = ({ children }) => {
         changes.push(`Bank rekanan diubah menjadi "${updatedFields.bankPartner}"`);
       }
       if (updatedFields.estimationDate !== undefined && updatedFields.estimationDate !== c.estimationDate) {
-        dbUpdate.estimation_date = updatedFields.estimationDate;
-        changes.push(`Perkiraan selesai diubah menjadi ${updatedFields.estimationDate}`);
+        dbUpdate.estimation_date = updatedFields.estimationDate || null;
+        changes.push(updatedFields.estimationDate ? `Perkiraan selesai diubah menjadi ${updatedFields.estimationDate}` : `Perkiraan selesai dihapus (tidak ditentukan)`);
+      }
+      if (updatedFields.paymentStatus !== undefined && updatedFields.paymentStatus !== c.paymentStatus) {
+        dbUpdate.payment_status = updatedFields.paymentStatus;
+        changes.push(`Status pembayaran diubah menjadi ${updatedFields.paymentStatus}`);
+      }
+      if (updatedFields.paidAmount !== undefined && Number(updatedFields.paidAmount) !== c.paidAmount) {
+        dbUpdate.paid_amount = Number(updatedFields.paidAmount);
+        changes.push(`Jumlah pembayaran diubah menjadi Rp ${Number(updatedFields.paidAmount).toLocaleString('id-ID')}`);
       }
 
       if (Object.keys(dbUpdate).length > 0) {
@@ -999,6 +1013,10 @@ export const CasesProvider = ({ children }) => {
         documentsReady: c.documents_ready,
         entryDate: c.entry_date,
         estimationDate: c.estimation_date,
+        clientName: c.client_name,
+        fees: Number(c.fees || 0),
+        paymentStatus: c.payment_status || 'Belum Lunas',
+        paidAmount: Number(c.paid_amount || 0),
         checklist: (c.checklist || []).map(item => ({
           id: item.id,
           orderNum: item.order_num,

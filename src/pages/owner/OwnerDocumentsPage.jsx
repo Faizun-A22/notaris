@@ -149,7 +149,7 @@ export const OwnerDocumentsPage = () => {
                   </tr>
                 ) : (
                   filtered.map((c) => {
-                    const isOverdue = !c.isComplete && new Date(c.estimationDate) < new Date();
+                    const isOverdue = !c.isComplete && c.estimationDate && new Date(c.estimationDate) < new Date();
                     const isSelected = selectedCase?.id === c.id;
                     return (
                       <tr

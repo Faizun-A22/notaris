@@ -113,6 +113,7 @@ export const CaseTable = ({ searchVal = '' }) => {
 
   // Format date as DD MMM YYYY (e.g. 01 Oct 2024)
   const formatEstimationDate = (dateStr) => {
+    if (!dateStr) return '-';
     try {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
@@ -128,6 +129,7 @@ export const CaseTable = ({ searchVal = '' }) => {
 
   // Calculate days overdue
   const getDaysOverdue = (dateStr) => {
+    if (!dateStr) return 0;
     try {
       const date = new Date(dateStr);
       const today = new Date();

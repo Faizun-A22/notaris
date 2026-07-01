@@ -94,6 +94,48 @@ export const CreateDocumentPage = () => {
   // Step 5: Jadwal / Deadline
   const [entryDate, setEntryDate] = useState(getTodayDateString());
   const [estimationDate, setEstimationDate] = useState(calculateEstimationDate(getTodayDateString()));
+  const [hasEstimationDate, setHasEstimationDate] = useState(false);
+  const [fees, setFees] = useState(0);
+  const [paymentStatus, setPaymentStatus] = useState('Belum Lunas');
+  const [paidAmount, setPaidAmount] = useState(0);
+
+  // Update default fees when serviceType changes
+  useEffect(() => {
+    const abbrev = mapServiceTypeToAbbreviation(serviceType);
+    let defaultFee = 25000000;
+    if (abbrev === 'AJB') defaultFee = 12000000;
+    else if (abbrev === 'SKMHT') defaultFee = 4500000;
+    else if (abbrev === 'HT') defaultFee = 8000000;
+    else if (abbrev === 'APHT') defaultFee = 8000000;
+    
+    setFees(defaultFee);
+  }, [serviceType]);
+
+  const handlePaidAmountChange = (val) => {
+    const amt = Number(val) || 0;
+    setPaidAmount(amt);
+    
+    if (amt >= fees && fees > 0) {
+      setPaymentStatus('Lunas');
+    } else if (amt > 0) {
+      setPaymentStatus('DP');
+    } else {
+      setPaymentStatus('Belum Lunas');
+    }
+  };
+
+  const handleFeesChange = (val) => {
+    const f = Number(val) || 0;
+    setFees(f);
+    
+    if (paidAmount >= f && f > 0) {
+      setPaymentStatus('Lunas');
+    } else if (paidAmount > 0) {
+      setPaymentStatus('DP');
+    } else {
+      setPaymentStatus('Belum Lunas');
+    }
+  };
 
   // Step 6: Catatan
   const [notes, setNotes] = useState('');
@@ -244,8 +286,18 @@ export const CreateDocumentPage = () => {
           toast.error('Tanggal masuk berkas wajib dipilih!');
           return false;
         }
-        if (!estimationDate || new Date(estimationDate) < new Date(entryDate)) {
-          toast.error('Tanggal estimasi tidak boleh sebelum tanggal masuk!');
+        if (hasEstimationDate) {
+          if (!estimationDate || new Date(estimationDate) < new Date(entryDate)) {
+            toast.error('Tanggal estimasi tidak boleh sebelum tanggal masuk!');
+            return false;
+          }
+        }
+        if (fees < 0) {
+          toast.error('Biaya akta tidak boleh negatif!');
+          return false;
+        }
+        if (paidAmount < 0 || paidAmount > fees) {
+          toast.error('Nominal dibayar tidak boleh negatif atau melebihi total biaya!');
           return false;
         }
         return true;
@@ -287,11 +339,14 @@ export const CreateDocumentPage = () => {
           propertyLocation,
           transactionValue: transactionValue ? Number(transactionValue) : 0,
           bankPartner: bankPartner || 'Tidak Ada',
-          estimationDate,
+          estimationDate: hasEstimationDate ? estimationDate : null,
           entryDate,
           notes: notes || 'Draf berkas terdaftar.',
           status: 'Pemeriksaan Dokumen',
-          isDraft: true // Saved as draft flag
+          isDraft: true,
+          fees: Number(fees),
+          paymentStatus,
+          paidAmount: Number(paidAmount)
         });
 
         setLoading(false);
@@ -337,11 +392,14 @@ export const CreateDocumentPage = () => {
           propertyLocation,
           transactionValue: Number(transactionValue),
           bankPartner: bankPartner || 'Tidak Ada',
-          estimationDate,
+          estimationDate: hasEstimationDate ? estimationDate : null,
           entryDate,
           notes: notes || 'Berkas baru diterbitkan.',
           checklist: finalChecklist,
-          status: 'Pemeriksaan Dokumen'
+          status: 'Pemeriksaan Dokumen',
+          fees: Number(fees),
+          paymentStatus,
+          paidAmount: Number(paidAmount)
         });
 
         setLoading(false);
@@ -774,15 +832,15 @@ export const CreateDocumentPage = () => {
             </div>
           </div>
         )}
-
         {/* STEP 5: JADWAL & TENGGAT */}
         {step === 5 && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <h3 className="text-[17px] font-bold text-on-surface border-b pb-2.5 border-outline-variant/60">
-              Penjadwalan Berkas
+              Penjadwalan & Biaya Berkas
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Tanggal Berkas Masuk */}
               <div className="flex flex-col gap-2">
                 <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="entry_date">
                   Tanggal Berkas Masuk <span className="text-error">*</span>
@@ -800,29 +858,122 @@ export const CreateDocumentPage = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="estimation_date">
-                  Tanggal Estimasi Selesai <span className="text-error">*</span>
+              {/* Toggle Estimasi */}
+              <div className="flex flex-col gap-2 justify-center">
+                <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                  Tenggat Waktu Pengerjaan
                 </label>
-                <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]">event_available</span>
+                <div className="flex items-center gap-3 py-3">
                   <input
-                    id="estimation_date"
-                    type="date"
-                    required
-                    value={estimationDate}
-                    onChange={(e) => setEstimationDate(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface transition-all focus:outline-none focus:border-primary focus:border-2"
+                    id="has_estimation"
+                    type="checkbox"
+                    checked={hasEstimationDate}
+                    onChange={(e) => setHasEstimationDate(e.target.checked)}
+                    className="w-5 h-5 text-primary border-outline-variant rounded focus:ring-primary/20"
                   />
+                  <label htmlFor="has_estimation" className="text-body-md text-on-surface font-semibold cursor-pointer select-none">
+                    Tentukan Tanggal Target Selesai (Prioritas)
+                  </label>
                 </div>
               </div>
             </div>
 
-            <div className="bg-primary-soft p-4 rounded-xl border border-primary/20 flex gap-3.5 items-start mt-4">
-              <span className="material-symbols-outlined text-primary text-[22px] shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
-              <p className="text-[12px] text-primary-dark leading-relaxed font-semibold">
-                Sistem memberikan estimasi penyelesaian standar 14 hari kerja. Anda dapat menyesuaikan estimasi selesai di atas tergantung kompleksitas berkas dan kelancaran validasi dokumen di dinas terkait.
-              </p>
+            {/* Kolom Estimasi Selesai (Kondisional) */}
+            {hasEstimationDate && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-200">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="estimation_date">
+                    Tanggal Estimasi Selesai <span className="text-error">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]">event_available</span>
+                    <input
+                      id="estimation_date"
+                      type="date"
+                      required={hasEstimationDate}
+                      value={estimationDate}
+                      onChange={(e) => setEstimationDate(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface transition-all focus:outline-none focus:border-primary focus:border-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-primary-soft p-4 rounded-xl border border-primary/20 flex gap-3.5 items-start">
+                  <span className="material-symbols-outlined text-primary text-[22px] shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
+                  <p className="text-[12px] text-primary-dark leading-relaxed font-semibold">
+                    Sistem memberikan estimasi standar 14 hari. Anda dapat menyesuaikannya sesuai kompleksitas berkas dan waktu instansi (BPN/Dinas).
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* BAGIAN KEUANGAN (BIAYA & PEMBAYARAN) */}
+            <div className="border-t border-outline-variant/60 pt-6">
+              <h4 className="text-[14px] font-bold text-primary uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[20px]">payments</span>
+                Informasi Biaya & Pembayaran
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Total Biaya */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="fees">
+                    Biaya Jasa Notaris (Rupiah) <span className="text-error">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-on-surface-variant text-[13px] font-bold">Rp</span>
+                    <input
+                      id="fees"
+                      type="number"
+                      min="0"
+                      required
+                      value={fees}
+                      onChange={(e) => handleFeesChange(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface font-semibold focus:outline-none focus:border-primary focus:border-2"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                {/* Jumlah Dibayar */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider" htmlFor="paid_amount">
+                    Nominal Dibayar (Rupiah)
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-on-surface-variant text-[13px] font-bold">Rp</span>
+                    <input
+                      id="paid_amount"
+                      type="number"
+                      min="0"
+                      max={fees}
+                      value={paidAmount}
+                      onChange={(e) => handlePaidAmountChange(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface font-semibold focus:outline-none focus:border-primary focus:border-2"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                {/* Status Pembayaran (Auto) */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                    Status Pembayaran
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px]">credit_card</span>
+                    <select
+                      value={paymentStatus}
+                      onChange={(e) => setPaymentStatus(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface font-bold focus:outline-none focus:border-primary focus:border-2"
+                    >
+                      <option value="Belum Lunas">Belum Lunas</option>
+                      <option value="DP">DP (Down Payment)</option>
+                      <option value="Lunas">Lunas</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

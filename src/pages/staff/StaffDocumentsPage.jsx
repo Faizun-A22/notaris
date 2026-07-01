@@ -26,6 +26,26 @@ const PRIORITY_COLOR = (c) => {
   return 'border-l-primary'; // Aktif diproses (Biru)
 };
 
+const copyToClipboard = (text) => {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text);
+  } else {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+    document.body.removeChild(textArea);
+    return Promise.resolve();
+  }
+};
+
 export const StaffDocumentsPage = () => {
   const { searchVal } = useOutletContext();
   const navigate = useNavigate();
@@ -231,9 +251,10 @@ export const StaffDocumentsPage = () => {
             </div>
           ) : (
             filtered.map((c) => {
-              const daysLeft = Math.ceil((new Date(c.estimationDate) - new Date()) / (1000 * 60 * 60 * 24));
-              const isOverdue = !c.isComplete && daysLeft < 0;
-              const isUrgent = !c.isComplete && daysLeft >= 0 && daysLeft <= 3;
+              const hasEstimation = !!c.estimationDate;
+              const daysLeft = hasEstimation ? Math.ceil((new Date(c.estimationDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+              const isOverdue = hasEstimation && !c.isComplete && daysLeft < 0;
+              const isUrgent = hasEstimation && !c.isComplete && daysLeft >= 0 && daysLeft <= 3;
               const isSelected = selectedCase?.id === c.id;
 
               const chList = c.checklist || getDefaultChecklist(c.serviceType) || [];
@@ -487,16 +508,19 @@ export const StaffDocumentsPage = () => {
                 <input
                   type="text"
                   readOnly
-                  value={`${window.location.origin}/track?case=${shareCase.caseNumber}`}
+                  value={`${window.location.origin}/status?case=${shareCase.caseNumber}`}
                   className="flex-1 bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[12px] font-mono text-on-surface select-all focus:outline-none"
                 />
                 <button
                   onClick={() => {
-                    const link = `${window.location.origin}/track?case=${shareCase.caseNumber}`;
-                    navigator.clipboard.writeText(link);
-                    setCopied(true);
-                    toast.success('Link pelacakan berhasil disalin!');
-                    setTimeout(() => setCopied(false), 2000);
+                    const link = `${window.location.origin}/status?case=${shareCase.caseNumber}`;
+                    copyToClipboard(link).then(() => {
+                      setCopied(true);
+                      toast.success('Link pelacakan berhasil disalin!');
+                      setTimeout(() => setCopied(false), 2000);
+                    }).catch(() => {
+                      toast.error('Gagal menyalin link.');
+                    });
                   }}
                   className={`px-4 py-2 rounded-lg text-[12px] font-bold transition-all flex items-center gap-1 shrink-0 ${
                     copied 
@@ -522,7 +546,7 @@ export const StaffDocumentsPage = () => {
               <div className="bg-white p-4 rounded-xl shadow-md border border-outline-variant/60 flex items-center justify-center animate-in zoom-in-95 duration-300">
                 <QRCodeSVG 
                   id={"qr-svg-" + shareCase.caseNumber.replace(/\//g, "-")}
-                  value={`${window.location.origin}/track?case=${shareCase.caseNumber}`} 
+                  value={`${window.location.origin}/status?case=${shareCase.caseNumber}`} 
                   size={160}
                   level="H"
                   includeMargin={false}

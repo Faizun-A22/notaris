@@ -12,6 +12,10 @@ import LoginPage from './pages/auth/LoginPage';
 
 // Client
 import ClientTrackingPage from './pages/client/ClientTrackingPage';
+import ClientPublicStatus from './pages/client/ClientPublicStatus';
+
+// Finance
+import FinancePage from './pages/common/FinancePage';
 
 // Owner Pages
 import OwnerDashboard from './pages/owner/OwnerDashboard';
@@ -38,6 +42,7 @@ function App() {
             <Route path="/login/owner" element={<LoginPage />} />
             <Route path="/login/staff" element={<LoginPage />} />
             <Route path="/track" element={<ClientTrackingPage />} />
+            <Route path="/status" element={<ClientPublicStatus />} />
 
             {/* Owner Routes */}
             <Route path="/owner" element={<OwnerLayout />}>
@@ -46,6 +51,7 @@ function App() {
               <Route path="staff" element={<OwnerStaffManagement />} />
               <Route path="documents" element={<OwnerDocumentsPage />} />
               <Route path="clients" element={<OwnerClientsPage />} />
+              <Route path="finance" element={<FinancePage />} />
               <Route path="activity" element={<StaffActivityPage />} />
               <Route path="settings" element={<StaffSettingsPage />} />
             </Route>
@@ -58,6 +64,7 @@ function App() {
               <Route path="documents" element={<StaffDocumentsPage />} />
               <Route path="documents/:id" element={<DocumentDetailPage />} />
               <Route path="clients" element={<OwnerClientsPage />} />
+              <Route path="finance" element={<FinancePage />} />
               <Route path="activity" element={<StaffActivityPage />} />
               <Route path="settings" element={<StaffSettingsPage />} />
             </Route>

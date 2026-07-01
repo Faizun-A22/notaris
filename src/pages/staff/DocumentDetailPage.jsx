@@ -5,6 +5,26 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useCases } from '../../hooks/useCases';
 import { formatDate } from '../../utils/formatDate';
 
+const copyToClipboard = (text) => {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text);
+  } else {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+    document.body.removeChild(textArea);
+    return Promise.resolve();
+  }
+};
+
 export const DocumentDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -46,6 +66,8 @@ export const DocumentDetailPage = () => {
   const [editLocation, setEditLocation] = useState('');
   const [editBank, setEditBank] = useState('');
   const [editEstimationDate, setEditEstimationDate] = useState('');
+  const [editPaymentStatus, setEditPaymentStatus] = useState('Belum Lunas');
+  const [editPaidAmount, setEditPaidAmount] = useState(0);
 
   useEffect(() => {
     if (activeCase) {
@@ -55,6 +77,8 @@ export const DocumentDetailPage = () => {
       setEditLocation(activeCase.propertyLocation || '');
       setEditBank(activeCase.bankPartner || '');
       setEditEstimationDate(activeCase.estimationDate || '');
+      setEditPaymentStatus(activeCase.paymentStatus || 'Belum Lunas');
+      setEditPaidAmount(activeCase.paidAmount || 0);
     }
   }, [activeCase]);
 
@@ -65,7 +89,9 @@ export const DocumentDetailPage = () => {
         fees: Number(editFees) || 0,
         propertyLocation: editLocation,
         bankPartner: editBank,
-        estimationDate: editEstimationDate
+        estimationDate: editEstimationDate,
+        paymentStatus: editPaymentStatus,
+        paidAmount: Number(editPaidAmount) || 0
       });
       setShowEditDetailsModal(false);
       toast.success('Detail berkas berhasil diperbarui!');
@@ -1027,11 +1053,16 @@ export const DocumentDetailPage = () => {
         {[
           { label: 'Tanggal Registrasi', value: formatDate(activeCase.entryDate), icon: 'calendar_today', color: 'text-primary' },
           { label: 'Estimasi Selesai', value: formatDate(activeCase.estimationDate), icon: 'event_available', color: 'text-error' },
+          { label: 'Biaya Akta', value: `Rp ${(activeCase.fees || 0).toLocaleString('id-ID')}`, icon: 'payments', color: 'text-primary' },
+          { 
+            label: 'Status Pembayaran', 
+            value: `${activeCase.paymentStatus || 'Belum Lunas'} (Dibayar: Rp ${(activeCase.paidAmount || 0).toLocaleString('id-ID')})`, 
+            icon: 'credit_card', 
+            color: activeCase.paymentStatus === 'Lunas' ? 'text-secondary' : activeCase.paymentStatus === 'DP' ? 'text-primary' : 'text-error' 
+          },
           { label: 'Lokasi Objek', value: activeCase.propertyLocation || 'Jakarta Selatan', icon: 'location_on', color: 'text-primary' },
           { label: 'Bank Rekanan', value: activeCase.bankPartner || 'Bank Mandiri', icon: 'corporate_fare', color: 'text-primary' },
-          { label: 'Biaya Akta', value: `Rp ${(activeCase.fees || 0).toLocaleString('id-ID')}`, icon: 'payments', color: 'text-primary' },
           { label: 'Staf Penanggung Jawab', value: activeCase.assignedStaff || 'Ani Lestari, S.H.', icon: 'engineering', color: 'text-primary' },
-          { label: 'Kontak Klien', value: `${activeCase.clientEmail || 'klien@email.com'} / ${activeCase.clientPhone || '-'}`, icon: 'contact_mail', color: 'text-primary' },
           { label: 'Status Kelengkapan', value: `${receivedCount} dari ${totalCount} Dokumen Diterima`, icon: 'checklist', color: 'text-primary' }
         ].map((item, index) => (
           <div key={index} className="bg-surface-container-low p-4 rounded-xl flex items-start gap-3 text-left">
@@ -1759,16 +1790,19 @@ export const DocumentDetailPage = () => {
                   <input
                     type="text"
                     readOnly
-                    value={`${window.location.origin}/track?case=${activeCase.caseNumber}`}
+                    value={`${window.location.origin}/status?case=${activeCase.caseNumber}`}
                     className="flex-1 bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-[12px] font-mono text-on-surface select-all focus:outline-none"
                   />
                   <button
                     onClick={() => {
-                      const link = `${window.location.origin}/track?case=${activeCase.caseNumber}`;
-                      navigator.clipboard.writeText(link);
-                      setCopied(true);
-                      toast.success('Link pelacakan berhasil disalin!');
-                      setTimeout(() => setCopied(false), 2000);
+                      const link = `${window.location.origin}/status?case=${activeCase.caseNumber}`;
+                      copyToClipboard(link).then(() => {
+                        setCopied(true);
+                        toast.success('Link pelacakan berhasil disalin!');
+                        setTimeout(() => setCopied(false), 2000);
+                      }).catch(() => {
+                        toast.error('Gagal menyalin link.');
+                      });
                     }}
                     className={`px-4 py-2 rounded-lg text-[12px] font-bold transition-all flex items-center gap-1 shrink-0 ${
                       copied 
@@ -1794,7 +1828,7 @@ export const DocumentDetailPage = () => {
                 <div className="bg-white p-4 rounded-xl shadow-md border border-outline-variant/60 flex items-center justify-center animate-in zoom-in-95 duration-300">
                   <QRCodeSVG 
                     id={"qr-svg-" + activeCase.caseNumber.replace(/\//g, "-")}
-                    value={`${window.location.origin}/track?case=${activeCase.caseNumber}`} 
+                    value={`${window.location.origin}/status?case=${activeCase.caseNumber}`} 
                     size={160}
                     level="H"
                     includeMargin={false}
@@ -1859,10 +1893,60 @@ export const DocumentDetailPage = () => {
                   <input
                     type="number"
                     value={editFees}
-                    onChange={(e) => setEditFees(e.target.value)}
-                    className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none"
+                    onChange={(e) => {
+                      const val = Number(e.target.value) || 0;
+                      setEditFees(val);
+                      if (editPaidAmount >= val && val > 0) {
+                        setEditPaymentStatus('Lunas');
+                      } else if (editPaidAmount > 0) {
+                        setEditPaymentStatus('DP');
+                      } else {
+                        setEditPaymentStatus('Belum Lunas');
+                      }
+                    }}
+                    className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none font-semibold"
                     placeholder="Contoh: 12000000"
                   />
+                </div>
+
+                {/* Nominal Dibayar */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                    Nominal Dibayar (Rupiah)
+                  </label>
+                  <input
+                    type="number"
+                    value={editPaidAmount}
+                    onChange={(e) => {
+                      const val = Number(e.target.value) || 0;
+                      setEditPaidAmount(val);
+                      if (val >= editFees && editFees > 0) {
+                        setEditPaymentStatus('Lunas');
+                      } else if (val > 0) {
+                        setEditPaymentStatus('DP');
+                      } else {
+                        setEditPaymentStatus('Belum Lunas');
+                      }
+                    }}
+                    className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none font-semibold"
+                    placeholder="Contoh: 5000000"
+                  />
+                </div>
+
+                {/* Status Pembayaran */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                    Status Pembayaran
+                  </label>
+                  <select
+                    value={editPaymentStatus}
+                    onChange={(e) => setEditPaymentStatus(e.target.value)}
+                    className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none font-bold"
+                  >
+                    <option value="Belum Lunas">Belum Lunas</option>
+                    <option value="DP">DP (Down Payment)</option>
+                    <option value="Lunas">Lunas</option>
+                  </select>
                 </div>
 
                 {/* Lokasi Objek */}

@@ -53,6 +53,13 @@ export const Sidebar = ({ isOpen, onClose }) => {
       path: role === ROLES.OWNER ? '/owner/dashboard' : '/staff/dashboard',
       icon: 'dashboard',
     },
+    ...(role === ROLES.OWNER ? [
+      {
+        label: 'Kelola Staf',
+        path: '/owner/staff',
+        icon: 'manage_accounts',
+      }
+    ] : []),
     ...(role === ROLES.STAFF ? [
       {
         label: 'File Baru',
@@ -64,6 +71,11 @@ export const Sidebar = ({ isOpen, onClose }) => {
       label: 'Semua File',
       path: role === ROLES.OWNER ? '/owner/documents' : '/staff/documents',
       icon: 'folder_open',
+    },
+    {
+      label: 'Keuangan',
+      path: role === ROLES.OWNER ? '/owner/finance' : '/staff/finance',
+      icon: 'payments',
     },
     {
       label: 'Klien',
