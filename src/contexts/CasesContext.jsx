@@ -548,21 +548,29 @@ export const CasesProvider = ({ children }) => {
 
       // Sync stage ID
       let currentStageId = c.currentStageId;
-      if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB') {
-        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Tanda Tangan Akta': 5, 'Validasi Pajak': 6, 'Proses BPN': 8, 'Selesai': 18 };
-        currentStageId = statusMap[status] || 1;
-      } else if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
-        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Validasi Pajak': 4, 'Proses BPN': 6, 'Selesai': 15 };
-        currentStageId = statusMap[status] || 1;
-      } else if (c.serviceType === 'PECAH') {
-        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Validasi Pajak': 5, 'Proses BPN': 5, 'Selesai': 15 };
-        currentStageId = statusMap[status] || 1;
-      } else if (c.serviceType === 'GANTI') {
-        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Selesai': 14 };
-        currentStageId = statusMap[status] || 1;
-      } else if (c.serviceType === 'KONVERSI') {
-        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Selesai': 15 };
-        currentStageId = statusMap[status] || 1;
+      const isPPAT = c.category?.toLowerCase() === 'ppat' || ['AJB', 'HIBAH', 'APHB', 'APHT', 'WARIS', 'ROYA', 'PECAH', 'GANTI', 'KONVERSI', 'SKMHT', 'HT', 'HGB', 'HAK_PAKAI'].includes(c.serviceType);
+      
+      if (isPPAT) {
+        if (c.serviceType === 'APHT') {
+          const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 3, 'Tanda Tangan Akta': 4, 'Proses BPN': 6, 'Selesai': 13 };
+          currentStageId = statusMap[status] || 1;
+        } else if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
+          const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Validasi Pajak': 4, 'Proses BPN': 6, 'Selesai': 15 };
+          currentStageId = statusMap[status] || 1;
+        } else if (c.serviceType === 'PECAH') {
+          const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Validasi Pajak': 5, 'Proses BPN': 5, 'Selesai': 15 };
+          currentStageId = statusMap[status] || 1;
+        } else if (c.serviceType === 'GANTI') {
+          const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Selesai': 14 };
+          currentStageId = statusMap[status] || 1;
+        } else if (c.serviceType === 'KONVERSI') {
+          const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Selesai': 15 };
+          currentStageId = statusMap[status] || 1;
+        } else {
+          // Standard PPAT stages (AJB/HIBAH/APHB/HT/HGB/HAK_PAKAI/SKMHT etc.)
+          const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 4, 'Tanda Tangan Akta': 5, 'Validasi Pajak': 6, 'Proses BPN': 8, 'Selesai': 18 };
+          currentStageId = statusMap[status] || 1;
+        }
       } else if (c.serviceType === 'FIDUSIA') {
         const statusMap = { 'Pemeriksaan Dokumen': 1, 'Penyusunan Draf': 2, 'Tanda Tangan Akta': 3, 'Selesai': 7 };
         currentStageId = statusMap[status] || 1;
@@ -580,9 +588,6 @@ export const CasesProvider = ({ children }) => {
         currentStageId = statusMap[status] || 1;
       } else if (c.serviceType === 'YAYASAN' || c.serviceType === 'PT' || c.serviceType === 'CV') {
         const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 3, 'Tanda Tangan Akta': 4, 'Validasi Pajak': 5, 'Proses BPN': 6, 'Selesai': 8 };
-        currentStageId = statusMap[status] || 1;
-      } else if (c.serviceType === 'APHT') {
-        const statusMap = { 'Pemeriksaan Dokumen': 1, 'Verifikasi Sertifikat': 2, 'Penyusunan Draf': 3, 'Tanda Tangan Akta': 4, 'Proses BPN': 6, 'Selesai': 13 };
         currentStageId = statusMap[status] || 1;
       }
 
@@ -654,26 +659,34 @@ export const CasesProvider = ({ children }) => {
       if (!c) return;
 
       let stageLabel = `Tahapan ${stageId}`;
-      if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB') {
-        const ajbStages = ['Pengecekan Berkas', 'Validasi Sertifikat', 'Pengecekan Sertifikat', 'Pengetikan Akta', 'Tanda Tangan Akta', 'Pembayaran Pajak Peralihan', 'Validasi Pajak Peralihan (PPH Final)', 'Penomoran Akta', 'Pendaftaran Akta', 'Masuk Berkas Fisik ke BPN', 'Pemeriksaan Berkas oleh BPN', 'Pencarian Buku Tanah', 'Pembayaran SPS', 'Pemeriksaan Draft Sertifikat', 'Draft Sertifikat', 'Penerbitan Sertifikat', 'Loket Penyerahan Produk', 'Penyerahan kepada Pemohon'];
-        stageLabel = ajbStages[stageId - 1] || stageLabel;
-      } else if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
-        const warisStages = ['Pengecekan berkas', 'Proses validasi sertifikat', 'Proses pengecekan sertifikat', 'Pembayaran pajak peralihan', 'Validasi pajak peralihan', 'Pendaftaran pada atr bpn', 'Pemeriksaaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Cari buku tanah di warkah bpn', 'Pembayaran sps', 'Pemeriksaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
-        stageLabel = warisStages[stageId - 1] || stageLabel;
-      } else if (c.serviceType === 'PECAH') {
-        const pecahStages = ['Pengecekan berkas', 'Pengecekan ke bpn status tanah yang kan dipecah', 'Pendaftaran ukur pemechan', 'Pengajuan tapak kapling', 'Masuk berkas fisik ke bpn', 'Pemeriksaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Pembayaran sps', 'Ruang pengukuran untuk gambar, pemetaan, cetak su', 'Cari buku tanah di warkah bpn', 'Pemeriksaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
-        stageLabel = pecahStages[stageId - 1] || stageLabel;
-      } else if (c.serviceType === 'GANTI') {
-        const gantiStages = ['Pengecekan berkas', 'Pengecekan ke bpn status tanah yang akan diproses', 'Pendaftaran ukur', 'Masuk berkas fisik ke bpn', 'Pemeriksaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Pembayaran sps', 'Ruang pengukuran untuk gambar, pemetaan, cetak su', 'Cari buku tanah di warkah bpn', 'Pemriksaaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
-        stageLabel = gantiStages[stageId - 1] || stageLabel;
-      } else if (c.serviceType === 'KONVERSI') {
-        const konversiStages = ['Pengecekan berkas', 'Pengecekan ke bpn status tanah yang akan diproses', 'Pendaftaran ukur', 'Masuk berkas fisik ke bpn', 'Pemeriksaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Pembayaran sps', 'Ruang pengukuran untuk gambar, pemetaan, cetak su', 'Panitia lapang oleh petugas bpn', 'pengumuman', 'Pemeriksaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
-        stageLabel = konversiStages[stageId - 1] || stageLabel;
+      const isPPAT = c.category?.toLowerCase() === 'ppat' || ['AJB', 'HIBAH', 'APHB', 'APHT', 'WARIS', 'ROYA', 'PECAH', 'GANTI', 'KONVERSI', 'SKMHT', 'HT', 'HGB', 'HAK_PAKAI'].includes(c.serviceType);
+      
+      if (isPPAT) {
+        if (c.serviceType === 'APHT') {
+          const aphtStages = ['Pengecekan kelengkapan Berkas', 'Pengecekan sertifikat', 'Pengetikan akta', 'Tanda tangan akta', 'Penomoran akta', 'Pendaftaran akta pada aplikasi mitra kerja atr bpn dan spa', 'Backup pada aplikasi bank', 'Verifikasi berkas oleh bpn melalui aplikasi mutra kerja atr bpn', 'Berkas dikembalikan atau telah diverifikasi oleh bpn', 'Pembayaran sps', 'Verifikasi oleh bpn pada aplikasi bank', 'Penerbitan sht', 'Penyerahan berkas kepada pihak bank'];
+          stageLabel = aphtStages[stageId - 1] || stageLabel;
+        } else if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
+          const warisStages = ['Pengecekan berkas', 'Proses validasi sertifikat', 'Proses pengecekan sertifikat', 'Pembayaran pajak peralihan', 'Validasi pajak peralihan', 'Pendaftaran pada atr bpn', 'Pemeriksaaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Cari buku tanah di warkah bpn', 'Pembayaran sps', 'Pemeriksaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
+          stageLabel = warisStages[stageId - 1] || stageLabel;
+        } else if (c.serviceType === 'PECAH') {
+          const pecahStages = ['Pengecekan berkas', 'Pengecekan ke bpn status tanah yang kan dipecah', 'Pendaftaran ukur pemechan', 'Pengajuan tapak kapling', 'Masuk berkas fisik ke bpn', 'Pemeriksaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Pembayaran sps', 'Ruang pengukuran untuk gambar, pemetaan, cetak su', 'Cari buku tanah di warkah bpn', 'Pemeriksaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
+          stageLabel = pecahStages[stageId - 1] || stageLabel;
+        } else if (c.serviceType === 'GANTI') {
+          const gantiStages = ['Pengecekan berkas', 'Pengecekan ke bpn status tanah yang akan diproses', 'Pendaftaran ukur', 'Masuk berkas fisik ke bpn', 'Pemeriksaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Pembayaran sps', 'Ruang pengukuran untuk gambar, pemetaan, cetak su', 'Cari buku tanah di warkah bpn', 'Pemriksaaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
+          stageLabel = gantiStages[stageId - 1] || stageLabel;
+        } else if (c.serviceType === 'KONVERSI') {
+          const konversiStages = ['Pengecekan berkas', 'Pengecekan ke bpn status tanah yang akan diproses', 'Pendaftaran ukur', 'Masuk berkas fisik ke bpn', 'Pemeriksaan berkas oleh bpn', 'Berkas dikembalikan atau telah sesuai', 'Pembayaran sps', 'Ruang pengukuran untuk gambar, pemetaan, cetak su', 'Panitia lapang oleh petugas bpn', 'pengumuman', 'Pemeriksaan draft sertifikat', 'Draft sertifikat', 'Penerbitan sertifikat', 'Loket penyerahan produk', 'Penyerahan kepada pemohon'];
+          stageLabel = konversiStages[stageId - 1] || stageLabel;
+        } else {
+          // Standard PPAT stages (AJB/HIBAH/APHB/HT/HGB/HAK_PAKAI/SKMHT etc.)
+          const ajbStages = ['Pengecekan Berkas', 'Validasi Sertifikat', 'Pengecekan Sertifikat', 'Pengetikan Akta', 'Tanda Tangan Akta', 'Pembayaran Pajak Peralihan', 'Validasi Pajak Peralihan (PPH Final)', 'Penomoran Akta', 'Pendaftaran Akta', 'Masuk Berkas Fisik ke BPN', 'Pemeriksaan Berkas oleh BPN', 'Pencarian Buku Tanah', 'Pembayaran SPS', 'Pemeriksaan Draft Sertifikat', 'Draft Sertifikat', 'Penerbitan Sertifikat', 'Loket Penyerahan Produk', 'Penyerahan kepada Pemohon'];
+          stageLabel = ajbStages[stageId - 1] || stageLabel;
+        }
       } else if (c.serviceType === 'FIDUSIA') {
         const fidusiaStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA', 'PENDAFTARAN KE KEMENKUMHAM', 'PENERBITAN SK KEMENKUMHAM', 'PENYERAHAN AKTA KE PIHAK BANK'];
         stageLabel = fidusiaStages[stageId - 1] || stageLabel;
       } else if (c.serviceType === 'APJB' || c.serviceType === 'SKUM') {
-        const apjbStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'PENGECEKKAN SERTIFIKAT', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PEMBAYARAN PAJAK PERALIHAN', 'PENOMORAN AKTA', 'PENYERAHAN AKTA KE PEMOHON'];
+        const apjbStages = ['PENGECEKKAN LENGKAPAN BERKAS', 'PENGECEKKAN SERTIFIKAT', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PEMBAYARAN PAJAK PERALIHAN', 'PENOMORAN AKTA', 'PENYERAHAN AKTA KE PEMOHON'];
         stageLabel = apjbStages[stageId - 1] || stageLabel;
       } else if (c.serviceType === 'SEWA' || c.serviceType === 'CONSEN') {
         const sewaStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA', 'PENYERAHAN AKTA KE PEMOHON'];
@@ -693,9 +706,6 @@ export const CasesProvider = ({ children }) => {
       } else if (c.serviceType === 'CV') {
         const cvStages = ['PENGECEKKAN KELENGKAPAN BERKAS', 'DAFTAR NAMA CV PADA AHU', 'PENGETIKKAN AKTA', 'TANDA TANGAN AKTA', 'PENOMORAN AKTA', 'PENDAFTARAN KE KEMENKUMHAM', 'PENERBITAN SKT KEMENKUMHAM', 'PENYERAHAN AKTA KE PEMOHON'];
         stageLabel = cvStages[stageId - 1] || stageLabel;
-      } else if (c.serviceType === 'APHT') {
-        const aphtStages = ['Pengecekan kelengkapan Berkas', 'Pengecekan sertifikat', 'Pengetikan akta', 'Tanda tangan akta', 'Penomoran akta', 'Pendaftaran akta pada aplikasi mitra kerja atr bpn dan spa', 'Backup pada aplikasi bank', 'Verifikasi berkas oleh bpn melalui aplikasi mutra kerja atr bpn', 'Berkas dikembalikan atau telah diverifikasi oleh bpn', 'Pembayaran sps', 'Verifikasi oleh bpn pada aplikasi bank', 'Penerbitan sht', 'Penyerahan berkas kepada pihak bank'];
-        stageLabel = aphtStages[stageId - 1] || stageLabel;
       } else {
         const skmhtStages = ['Pengecekkan Berkas', 'Pengecekkan Sertifikat', 'Pengetikkan Akta', 'Tanda Tangan Akta', 'Penomoran Akta', 'Penyelesaian Berkas'];
         stageLabel = skmhtStages[stageId - 1] || stageLabel;

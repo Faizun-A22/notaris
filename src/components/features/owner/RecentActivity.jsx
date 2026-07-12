@@ -18,7 +18,7 @@ export const RecentActivity = () => {
           {displayActivities.map((act) => (
             <div key={act.id} className="relative">
               {/* Timeline dot */}
-              <div className="absolute -left-[22px] top-2 w-3.5 h-3.5 bg-primary rounded-full border-2 border-white dark:border-slate-800 shadow-sm"></div>
+              <div className="absolute -left-[22px] top-2 w-3.5 h-3.5 bg-primary rounded-full border-2 border-white shadow-sm"></div>
               
               <div className="flex justify-between items-start">
                 <div>
@@ -31,7 +31,7 @@ export const RecentActivity = () => {
                     </span>
                     <span className="font-normal text-on-surface-variant/80">{act.action}</span>
                   </p>
-                  <p className="text-[14px] text-success dark:text-primary font-bold mt-1.5">
+                  <p className="text-[14px] text-success font-bold mt-1.5">
                     {act.target}
                   </p>
                   <p className="text-[12px] text-on-surface-variant/80 mt-1.5 font-medium">

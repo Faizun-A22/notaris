@@ -23,7 +23,7 @@ export const UrgentAlerts = () => {
           overdueCases.map((c) => (
             <div 
               key={c.id} 
-              className="flex items-center justify-between p-4 rounded-xl border border-outline-variant hover:bg-[#F8F9FA] dark:hover:bg-[#334155] transition-all group cursor-pointer shadow-sm hover:shadow-md"
+              className="flex items-center justify-between p-4 rounded-xl border border-outline-variant hover:bg-[#F8F9FA] transition-all group cursor-pointer shadow-sm hover:shadow-md"
             >
               <div className="flex items-center gap-4">
                 <div className="bg-error-container text-on-error-container w-12 h-12 rounded-lg flex items-center justify-center font-bold text-[14px] shadow-sm">
@@ -44,7 +44,7 @@ export const UrgentAlerts = () => {
             </div>
           ))
         ) : (
-          <div className="py-12 text-center bg-[#F8F9FA] dark:bg-[#1E293B] rounded-xl border border-dashed border-outline-variant">
+          <div className="py-12 text-center bg-[#F8F9FA] rounded-xl border border-dashed border-outline-variant">
             <span className="material-symbols-outlined text-[48px] text-secondary mb-3">check_circle</span>
             <p className="text-on-surface-variant text-[14px] font-semibold">
               Semua berkas aman! Tidak ada berkas yang overdue saat ini.

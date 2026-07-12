@@ -433,7 +433,105 @@ export const DocumentDetailPage = () => {
 
   // Retrieve timeline stages dynamically based on serviceType
   const getStagesForCase = () => {
-    if (activeCase.serviceType === 'AJB' || activeCase.serviceType === 'HIBAH' || activeCase.serviceType === 'APHB') {
+    const isPPAT = activeCase.category?.toLowerCase() === 'ppat' || ['AJB', 'HIBAH', 'APHB', 'APHT', 'WARIS', 'ROYA', 'PECAH', 'GANTI', 'KONVERSI', 'SKMHT', 'HT', 'HGB', 'HAK_PAKAI'].includes(activeCase.serviceType);
+
+    if (activeCase.serviceType === 'APHT') {
+      return [
+        { id: 1, label: '1. Pengecekan kelengkapan Berkas', statusKey: 'Pemeriksaan Dokumen', date: '12 Oct' },
+        { id: 2, label: '2. Pengecekan sertifikat', statusKey: 'Verifikasi Sertifikat', date: '14 Oct' },
+        { id: 3, label: '3. Pengetikan akta', statusKey: 'Penyusunan Draf', date: 'Sedang Berlangsung' },
+        { id: 4, label: '4. Tanda tangan akta', statusKey: 'Tanda Tangan Akta', date: '' },
+        { id: 5, label: '5. Penomoran akta', statusKey: 'Tanda Tangan Akta', date: '' },
+        { id: 6, label: '6. Pendaftaran akta pada aplikasi mitra kerja atr bpn dan spa', statusKey: 'Proses BPN', date: '' },
+        { id: 7, label: '7. Backup pada aplikasi bank', statusKey: 'Proses BPN', date: '' },
+        { id: 8, label: '8. Verifikasi berkas oleh bpn melalui aplikasi mutra kerja atr bpn', statusKey: 'Proses BPN', date: '' },
+        { id: 9, label: '9. Berkas dikembalikan atau telah diverifikasi oleh bpn', statusKey: 'Proses BPN', date: '' },
+        { id: 10, label: '10. Pembayaran sps', statusKey: 'Proses BPN', date: '' },
+        { id: 11, label: '11. Verifikasi oleh bpn pada aplikasi bank', statusKey: 'Proses BPN', date: '' },
+        { id: 12, label: '12. Penerbitan sht', statusKey: 'Proses BPN', date: '' },
+        { id: 13, label: '13. Penyerahan berkas kepada pihak bank', statusKey: 'Selesai', date: '' }
+      ];
+    }
+
+    if (activeCase.serviceType === 'AJB' || activeCase.serviceType === 'HIBAH' || activeCase.serviceType === 'APHB' || isPPAT) {
+      // Check if it matches other specific PPAT services first
+      if (activeCase.serviceType === 'WARIS' || activeCase.serviceType === 'ROYA') {
+        return [
+          { id: 1, label: '1. Pengecekan berkas', statusKey: 'Pemeriksaan Dokumen', date: '12 Oct' },
+          { id: 2, label: '2. Proses validasi sertifikat', statusKey: 'Verifikasi Sertifikat', date: '14 Oct' },
+          { id: 3, label: '3. Proses pengecekan sertifikat', statusKey: 'Verifikasi Sertifikat', date: 'Sedang Berlangsung' },
+          { id: 4, label: '4. Pembayaran pajak peralihan', statusKey: 'Validasi Pajak', date: '' },
+          { id: 5, label: '5. Validasi pajak peralihan', statusKey: 'Validasi Pajak', date: '' },
+          { id: 6, label: '6. Pendaftaran pada atr bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 7, label: '7. Pemeriksaaan berkas oleh bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 8, label: '8. Berkas dikembalikan atau telah sesuai', statusKey: 'Proses BPN', date: '' },
+          { id: 9, label: '9. Cari buku tanah di warkah bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 10, label: '10. Pembayaran sps', statusKey: 'Proses BPN', date: '' },
+          { id: 11, label: '11. Pemeriksaan draft sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 12, label: '12. Draft sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 13, label: '13. Penerbitan sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 14, label: '14. Loket penyerahan produk', statusKey: 'Proses BPN', date: '' },
+          { id: 15, label: '15. Penyerahan kepada pemohon', statusKey: 'Selesai', date: '' }
+        ];
+      }
+      if (activeCase.serviceType === 'PECAH') {
+        return [
+          { id: 1, label: '1. Pengecekan berkas', statusKey: 'Pemeriksaan Dokumen', date: '12 Oct' },
+          { id: 2, label: '2. Pengecekan ke bpn status tanah yang kan dipecah', statusKey: 'Verifikasi Sertifikat', date: '14 Oct' },
+          { id: 3, label: '3. Pendaftaran ukur pemechan', statusKey: 'Verifikasi Sertifikat', date: 'Sedang Berlangsung' },
+          { id: 4, label: '4. Pengajuan tapak kapling', statusKey: 'Penyusunan Draf', date: '' },
+          { id: 5, label: '5. Masuk berkas fisik ke bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 6, label: '6. Pemeriksaan berkas oleh bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 7, label: '7. Berkas dikembalikan atau telah sesuai', statusKey: 'Proses BPN', date: '' },
+          { id: 8, label: '8. Pembayaran sps', statusKey: 'Proses BPN', date: '' },
+          { id: 9, label: '9. Ruang pengukuran untuk gambar, pemetaan, cetak su', statusKey: 'Proses BPN', date: '' },
+          { id: 10, label: '10. Cari buku tanah di warkah bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 11, label: '11. Pemeriksaan draft sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 12, label: '12. Draft sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 13, label: '13. Penerbitan sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 14, label: '14. Loket penyerahan produk', statusKey: 'Proses BPN', date: '' },
+          { id: 15, label: '15. Penyerahan kepada pemohon', statusKey: 'Selesai', date: '' }
+        ];
+      }
+      if (activeCase.serviceType === 'GANTI') {
+        return [
+          { id: 1, label: '1. Pengecekan berkas', statusKey: 'Pemeriksaan Dokumen', date: '12 Oct' },
+          { id: 2, label: '2. Pengecekan ke bpn status tanah yang akan diproses', statusKey: 'Verifikasi Sertifikat', date: '14 Oct' },
+          { id: 3, label: '3. Pendaftaran ukur', statusKey: 'Verifikasi Sertifikat', date: 'Sedang Berlangsung' },
+          { id: 4, label: '4. Masuk berkas fisik ke bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 5, label: '5. Pemeriksaan berkas oleh bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 6, label: '6. Berkas dikembalikan atau telah sesuai', statusKey: 'Proses BPN', date: '' },
+          { id: 7, label: '7. Pembayaran sps', statusKey: 'Proses BPN', date: '' },
+          { id: 8, label: '8. Ruang pengukuran untuk gambar, pemetaan, cetak su', statusKey: 'Proses BPN', date: '' },
+          { id: 9, label: '9. Cari buku tanah di warkah bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 10, label: '10. Pemriksaaan draft sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 11, label: '11. Draft sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 12, label: '12. Penerbitan sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 13, label: '13. Loket penyerahan produk', statusKey: 'Proses BPN', date: '' },
+          { id: 14, label: '14. Penyerahan kepada pemohon', statusKey: 'Selesai', date: '' }
+        ];
+      }
+      if (activeCase.serviceType === 'KONVERSI') {
+        return [
+          { id: 1, label: '1. Pengecekan berkas', statusKey: 'Pemeriksaan Dokumen', date: '12 Oct' },
+          { id: 2, label: '2. Pengecekan ke bpn status tanah yang akan diproses', statusKey: 'Verifikasi Sertifikat', date: '14 Oct' },
+          { id: 3, label: '3. Pendaftaran ukur', statusKey: 'Verifikasi Sertifikat', date: 'Sedang Berlangsung' },
+          { id: 4, label: '4. Masuk berkas fisik ke bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 5, label: '5. Pemeriksaan berkas oleh bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 6, label: '6. Berkas dikembalikan atau telah sesuai', statusKey: 'Proses BPN', date: '' },
+          { id: 7, label: '7. Pembayaran sps', statusKey: 'Proses BPN', date: '' },
+          { id: 8, label: '8. Ruang pengukuran untuk gambar, pemetaan, cetak su', statusKey: 'Proses BPN', date: '' },
+          { id: 9, label: '9. Panitia lapang oleh petugas bpn', statusKey: 'Proses BPN', date: '' },
+          { id: 10, label: '10. pengumuman', statusKey: 'Proses BPN', date: '' },
+          { id: 11, label: '11. Pemeriksaan draft sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 12, label: '12. Draft sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 13, label: '13. Penerbitan sertifikat', statusKey: 'Proses BPN', date: '' },
+          { id: 14, label: '14. Loket penyerahan produk', statusKey: 'Proses BPN', date: '' },
+          { id: 15, label: '15. Penyerahan kepada pemohon', statusKey: 'Selesai', date: '' }
+        ];
+      }
+
+      // Default PPAT stages (AJB/HIBAH/APHB/SKMHT/HT/HGB/HAK_PAKAI)
       return [
         { id: 1, label: '1. Pengecekan Berkas', statusKey: 'Pemeriksaan Dokumen', date: '12 Oct' },
         { id: 2, label: '2. Validasi Sertifikat', statusKey: 'Verifikasi Sertifikat', date: '14 Oct' },
@@ -670,64 +768,68 @@ export const DocumentDetailPage = () => {
       return activeCase.currentStageId;
     }
     
-    // Fallback based on status key
-    if (activeCase.serviceType === 'AJB' || activeCase.serviceType === 'HIBAH' || activeCase.serviceType === 'APHB') {
-      const statusMap = {
-        'Pemeriksaan Dokumen': 1,
-        'Verifikasi Sertifikat': 2,
-        'Penyusunan Draf': 4,
-        'Tanda Tangan Akta': 5,
-        'Validasi Pajak': 6,
-        'Proses BPN': 8,
-      };
-      return statusMap[activeCase.status] || 1;
-    } else if (activeCase.serviceType === 'APHT') {
-      const statusMap = {
-        'Pemeriksaan Dokumen': 1,
-        'Verifikasi Sertifikat': 2,
-        'Penyusunan Draf': 3,
-        'Tanda Tangan Akta': 4,
-        'Proses BPN': 6,
-      };
-      return statusMap[activeCase.status] || 1;
-    } else if (activeCase.serviceType === 'WARIS' || activeCase.serviceType === 'ROYA') {
-      const statusMap = {
-        'Pemeriksaan Dokumen': 1,
-        'Verifikasi Sertifikat': 2,
-        'Validasi Pajak': 4,
-        'Proses BPN': 6,
-      };
-      return statusMap[activeCase.status] || 1;
-    } else if (activeCase.serviceType === 'PECAH') {
-      const statusMap = {
-        'Pemeriksaan Dokumen': 1,
-        'Verifikasi Sertifikat': 2,
-        'Penyusunan Draf': 4,
-        'Tanda Tangan Akta': 4,
-        'Validasi Pajak': 5,
-        'Proses BPN': 5,
-      };
-      return statusMap[activeCase.status] || 1;
-    } else if (activeCase.serviceType === 'GANTI') {
-      const statusMap = {
-        'Pemeriksaan Dokumen': 1,
-        'Verifikasi Sertifikat': 2,
-        'Penyusunan Draf': 4,
-        'Tanda Tangan Akta': 4,
-        'Validasi Pajak': 4,
-        'Proses BPN': 4,
-      };
-      return statusMap[activeCase.status] || 1;
-    } else if (activeCase.serviceType === 'KONVERSI') {
-      const statusMap = {
-        'Pemeriksaan Dokumen': 1,
-        'Verifikasi Sertifikat': 2,
-        'Penyusunan Draf': 4,
-        'Tanda Tangan Akta': 4,
-        'Validasi Pajak': 4,
-        'Proses BPN': 4,
-      };
-      return statusMap[activeCase.status] || 1;
+    const isPPAT = activeCase.category?.toLowerCase() === 'ppat' || ['AJB', 'HIBAH', 'APHB', 'APHT', 'WARIS', 'ROYA', 'PECAH', 'GANTI', 'KONVERSI', 'SKMHT', 'HT', 'HGB', 'HAK_PAKAI'].includes(activeCase.serviceType);
+
+    if (isPPAT) {
+      if (activeCase.serviceType === 'APHT') {
+        const statusMap = {
+          'Pemeriksaan Dokumen': 1,
+          'Verifikasi Sertifikat': 2,
+          'Penyusunan Draf': 3,
+          'Tanda Tangan Akta': 4,
+          'Proses BPN': 6,
+        };
+        return statusMap[activeCase.status] || 1;
+      } else if (activeCase.serviceType === 'WARIS' || activeCase.serviceType === 'ROYA') {
+        const statusMap = {
+          'Pemeriksaan Dokumen': 1,
+          'Verifikasi Sertifikat': 2,
+          'Validasi Pajak': 4,
+          'Proses BPN': 6,
+        };
+        return statusMap[activeCase.status] || 1;
+      } else if (activeCase.serviceType === 'PECAH') {
+        const statusMap = {
+          'Pemeriksaan Dokumen': 1,
+          'Verifikasi Sertifikat': 2,
+          'Penyusunan Draf': 4,
+          'Tanda Tangan Akta': 4,
+          'Validasi Pajak': 5,
+          'Proses BPN': 5,
+        };
+        return statusMap[activeCase.status] || 1;
+      } else if (activeCase.serviceType === 'GANTI') {
+        const statusMap = {
+          'Pemeriksaan Dokumen': 1,
+          'Verifikasi Sertifikat': 2,
+          'Penyusunan Draf': 4,
+          'Tanda Tangan Akta': 4,
+          'Validasi Pajak': 4,
+          'Proses BPN': 4,
+        };
+        return statusMap[activeCase.status] || 1;
+      } else if (activeCase.serviceType === 'KONVERSI') {
+        const statusMap = {
+          'Pemeriksaan Dokumen': 1,
+          'Verifikasi Sertifikat': 2,
+          'Penyusunan Draf': 4,
+          'Tanda Tangan Akta': 4,
+          'Validasi Pajak': 4,
+          'Proses BPN': 4,
+        };
+        return statusMap[activeCase.status] || 1;
+      } else {
+        // Standard PPAT stages (AJB/HIBAH/APHB/HT/HGB/HAK_PAKAI/SKMHT)
+        const statusMap = {
+          'Pemeriksaan Dokumen': 1,
+          'Verifikasi Sertifikat': 2,
+          'Penyusunan Draf': 4,
+          'Tanda Tangan Akta': 5,
+          'Validasi Pajak': 6,
+          'Proses BPN': 8,
+        };
+        return statusMap[activeCase.status] || 1;
+      }
     } else if (activeCase.serviceType === 'FIDUSIA') {
       const statusMap = {
         'Pemeriksaan Dokumen': 1,
@@ -821,10 +923,30 @@ export const DocumentDetailPage = () => {
           } 
         : item
     );
+    const isDocReady = updatedChecklist.every((item) => item.status === 'Sudah Diterima');
     updateCase(activeCase.id, {
       checklist: updatedChecklist,
-      documentsReady: updatedChecklist.every((item) => item.status === 'Sudah Diterima'),
+      documentsReady: isDocReady,
     });
+
+    if (isDocReady && !activeCase.documentsReady) {
+      toast.success('Semua berkas persyaratan lengkap! Berkas siap diproses.');
+      setTimeout(() => {
+        document.getElementById('workflow-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 500);
+    }
+  };
+
+  const handleAdvanceStage = () => {
+    const activeStageId = getActiveStageId();
+    const nextStage = stages.find((s) => s.id === activeStageId + 1);
+    if (nextStage) {
+      updateCaseStage(activeCase.id, nextStage.id, nextStage.statusKey);
+      toast.success(`Berhasil melanjutkan ke tahap: ${nextStage.label}`);
+    } else {
+      updateCaseStatus(activeCase.id, 'Selesai');
+      toast.success('Semua tahapan selesai! Berkas berhasil diselesaikan.');
+    }
   };
 
   const handleSaveRemarks = () => {
@@ -1077,6 +1199,57 @@ export const DocumentDetailPage = () => {
         ))}
       </div>
 
+      {/* Active Workflow Step Controller */}
+      <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant shadow-[0px_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-center justify-between gap-4 text-left print:hidden">
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+            !activeCase.documentsReady 
+              ? 'bg-amber-100 text-amber-800' 
+              : activeCase.status === 'Selesai' 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-primary-soft text-primary'
+          }`}>
+            <span className="material-symbols-outlined text-[26px]">
+              {!activeCase.documentsReady 
+                ? 'rule' 
+                : activeCase.status === 'Selesai' 
+                ? 'check_circle' 
+                : 'trending_up'}
+            </span>
+          </div>
+          <div>
+            <h4 className="font-bold text-on-surface text-[15px]">
+              {!activeCase.documentsReady 
+                ? 'Persyaratan Dokumen Belum Lengkap' 
+                : activeCase.status === 'Selesai' 
+                ? 'Semua Proses Pengerjaan Selesai' 
+                : 'Progres Alur Kerja Aktif'}
+            </h4>
+            <p className="text-[12.5px] text-on-surface-variant font-medium mt-1">
+              {!activeCase.documentsReady 
+                ? 'Selesaikan checklist dokumen di bawah terlebih dahulu untuk mengaktifkan alur kerja.' 
+                : activeCase.status === 'Selesai' 
+                ? 'Seluruh tahapan telah berhasil diselesaikan dan produk siap diserahkan kepada klien.' 
+                : `Tahap Aktif Saat Ini: ${stages.find(s => s.id === getActiveStageId())?.label || '-'}`}
+            </p>
+          </div>
+        </div>
+
+        {activeCase.documentsReady && activeCase.status !== 'Selesai' && (
+          <button
+            onClick={handleAdvanceStage}
+            className="px-5 py-2.5 bg-primary text-on-primary rounded-xl text-[13px] font-bold hover:opacity-95 shadow-md flex items-center gap-1.5 transition-all active:scale-[0.97] shrink-0"
+          >
+            <span>
+              {getActiveStageId() === stages.length 
+                ? 'Selesaikan Berkas' 
+                : `Lanjutkan ke Tahap ${getActiveStageId() + 1}: ${stages.find((s) => s.id === getActiveStageId() + 1)?.label.replace(/^\d+\.\s*/, '') || ''}`}
+            </span>
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </button>
+        )}
+      </div>
+
       {/* Grid Layout (Left lg:col-span-7, Right lg:col-span-5) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-stack-lg">
         
@@ -1311,7 +1484,7 @@ export const DocumentDetailPage = () => {
         </div>
 
         {/* Right Column - Timeline (lg:col-span-5) */}
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-5" id="workflow-section">
           <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding shadow-[0px_4px_20px_rgba(0,0,0,0.05)] sticky top-24 max-h-[calc(100vh-140px)] flex flex-col">
             <h4 className="font-headline-sm text-headline-sm font-bold flex items-center gap-2 mb-stack-md shrink-0 text-on-surface">
               <span className="material-symbols-outlined text-primary">trending_up</span>

@@ -30,21 +30,22 @@ const SaveButton = ({ section, savedSection, onSave, loading }) => (
 );
 
 export const StaffSettingsPage = () => {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, setProfile, logout } = useAuth();
   const navigate = useNavigate();
 
   // Form state — pre-filled from profile data
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('+62 812 3456 7890');
+  const [phone, setPhone] = useState('');
 
   // Sync profile data once loaded
   useEffect(() => {
     if (profile) {
       setName(profile.full_name || '');
       setTitle(profile.title || '');
-      setEmail(user?.email || '');
+      setEmail(profile.email || user?.email || '');
+      setPhone(profile.phone || '');
     } else if (user) {
       setEmail(user.email || '');
     }
@@ -70,11 +71,24 @@ export const StaffSettingsPage = () => {
           .update({
             full_name: name,
             title: title,
-            email: email
+            email: email,
+            phone: phone
           })
           .eq('id', user.id);
 
         if (error) throw error;
+
+        // Fetch latest profile to update AuthContext
+        const { data: updatedProfile, error: fetchErr } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (!fetchErr && updatedProfile) {
+          setProfile(updatedProfile);
+        }
+
         toast.success('Profil berhasil disimpan!');
         setSavedSection(section);
         setTimeout(() => setSavedSection(''), 2500);

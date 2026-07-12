@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   title       TEXT,
   role        TEXT NOT NULL CHECK (role IN ('owner', 'staff')),
   email       TEXT,
+  phone       TEXT,
   avatar_url  TEXT,
   is_active   BOOLEAN DEFAULT TRUE,
   created_at  TIMESTAMPTZ DEFAULT NOW(),

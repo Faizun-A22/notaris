@@ -6,13 +6,13 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function main() {
-  // Try querying services
-  console.log('Querying services...');
-  const { data: services, error: err1 } = await supabase.from('services').select('id, name').limit(5);
+  // Try querying profiles
+  console.log('Querying profiles...');
+  const { data: profiles, error: err1 } = await supabase.from('profiles').select('phone').limit(1);
   if (err1) {
-    console.error('Error services:', err1);
+    console.error('Error profiles:', err1);
   } else {
-    console.log('Services (first 5):', services);
+    console.log('Phone column check success! Result:', profiles);
   }
 
   // Try querying cases

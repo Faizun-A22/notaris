@@ -8,20 +8,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Dark Mode State and Logic
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark' || document.documentElement.classList.contains('dark');
-  });
 
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
 
   // Close drawer on path change (mobile)
   useEffect(() => {
@@ -184,22 +171,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
               SISTEM
             </span>
             <div className="space-y-2">
-              {/* Mode Gelap Toggle Link */}
-              <div 
-                onClick={() => setDarkMode(!darkMode)}
-                className="flex items-center justify-between px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-low transition-colors cursor-pointer select-none"
-              >
-                <div className="flex items-center gap-3.5">
-                  <span className="material-symbols-outlined text-[22px]">
-                    {darkMode ? 'light_mode' : 'dark_mode'}
-                  </span>
-                  <span className="text-[15px] font-semibold">Mode Gelap</span>
-                </div>
-                {/* Switch UI */}
-                <div className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${darkMode ? 'bg-primary' : 'bg-outline-variant'}`}>
-                  <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ease-in-out ${darkMode ? 'translate-x-4' : 'translate-x-0'}`}></div>
-                </div>
-              </div>
+
 
               {/* Pengaturan */}
               <Link

@@ -37,7 +37,104 @@ export const ClientTrackingPage = () => {
 
   const getStagesForCase = (c) => {
     if (!c) return [];
-    if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB') {
+    const isPPAT = c.category?.toLowerCase() === 'ppat' || ['AJB', 'HIBAH', 'APHB', 'APHT', 'WARIS', 'ROYA', 'PECAH', 'GANTI', 'KONVERSI', 'SKMHT', 'HT', 'HGB', 'HAK_PAKAI'].includes(c.serviceType);
+
+    if (c.serviceType === 'APHT') {
+      return [
+        { id: 1, label: 'Pengecekan kelengkapan Berkas' },
+        { id: 2, label: 'Pengecekan sertifikat' },
+        { id: 3, label: 'Pengetikan akta' },
+        { id: 4, label: 'Tanda tangan akta' },
+        { id: 5, label: 'Penomoran akta' },
+        { id: 6, label: 'Pendaftaran akta pada aplikasi mitra kerja atr bpn dan spa' },
+        { id: 7, label: 'Backup pada aplikasi bank' },
+        { id: 8, label: 'Verifikasi berkas oleh bpn melalui aplikasi mutra kerja atr bpn' },
+        { id: 9, label: 'Berkas dikembalikan atau telah diverifikasi oleh bpn' },
+        { id: 10, label: 'Pembayaran sps' },
+        { id: 11, label: 'Verifikasi oleh bpn pada aplikasi bank' },
+        { id: 12, label: 'Penerbitan sht' },
+        { id: 13, label: 'Penyerahan berkas kepada pihak bank' }
+      ];
+    }
+
+    if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB' || isPPAT) {
+      if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
+        return [
+          { id: 1, label: 'Pengecekan berkas' },
+          { id: 2, label: 'Proses validasi sertifikat' },
+          { id: 3, label: 'Proses pengecekan sertifikat' },
+          { id: 4, label: 'Pembayaran pajak peralihan' },
+          { id: 5, label: 'Validasi pajak peralihan' },
+          { id: 6, label: 'Pendaftaran pada atr bpn' },
+          { id: 7, label: 'Pemeriksaaan berkas oleh bpn' },
+          { id: 8, label: 'Berkas dikembalikan atau telah sesuai' },
+          { id: 9, label: 'Cari buku tanah di warkah bpn' },
+          { id: 10, label: 'Pembayaran sps' },
+          { id: 11, label: 'Pemeriksaan draft sertifikat' },
+          { id: 12, label: 'Draft sertifikat' },
+          { id: 13, label: 'Penerbitan sertifikat' },
+          { id: 14, label: 'Loket penyerahan produk' },
+          { id: 15, label: 'Penyerahan kepada pemohon' }
+        ];
+      }
+      if (c.serviceType === 'PECAH') {
+        return [
+          { id: 1, label: 'Pengecekan berkas' },
+          { id: 2, label: 'Pengecekan ke bpn status tanah yang kan dipecah' },
+          { id: 3, label: 'Pendaftaran ukur pemechan' },
+          { id: 4, label: 'Pengajuan tapak kapling' },
+          { id: 5, label: 'Masuk berkas fisik ke bpn' },
+          { id: 6, label: 'Pemeriksaan berkas oleh bpn' },
+          { id: 7, label: 'Berkas dikembalikan atau telah sesuai' },
+          { id: 8, label: 'Pembayaran sps' },
+          { id: 9, label: 'Ruang pengukuran untuk gambar, pemetaan, cetak su' },
+          { id: 10, label: 'Cari buku tanah di warkah bpn' },
+          { id: 11, label: 'Pemeriksaan draft sertifikat' },
+          { id: 12, label: 'Draft sertifikat' },
+          { id: 13, label: 'Penerbitan sertifikat' },
+          { id: 14, label: 'Loket penyerahan produk' },
+          { id: 15, label: 'Penyerahan kepada pemohon' }
+        ];
+      }
+      if (c.serviceType === 'GANTI') {
+        return [
+          { id: 1, label: 'Pengecekan berkas' },
+          { id: 2, label: 'Pengecekan ke bpn status tanah yang akan diproses' },
+          { id: 3, label: 'Pendaftaran ukur' },
+          { id: 4, label: 'Masuk berkas fisik ke bpn' },
+          { id: 5, label: 'Pemeriksaan berkas oleh bpn' },
+          { id: 6, label: 'Berkas dikembalikan atau telah sesuai' },
+          { id: 7, label: 'Pembayaran sps' },
+          { id: 8, label: 'Ruang pengukuran untuk gambar, pemetaan, cetak su' },
+          { id: 9, label: 'Cari buku tanah di warkah bpn' },
+          { id: 10, label: 'Pemriksaaan draft sertifikat' },
+          { id: 11, label: 'Draft sertifikat' },
+          { id: 12, label: 'Penerbitan sertifikat' },
+          { id: 13, label: 'Loket penyerahan produk' },
+          { id: 14, label: 'Penyerahan kepada pemohon' }
+        ];
+      }
+      if (c.serviceType === 'KONVERSI') {
+        return [
+          { id: 1, label: 'Pengecekan berkas' },
+          { id: 2, label: 'Pengecekan ke bpn status tanah yang akan diproses' },
+          { id: 3, label: 'Pendaftaran ukur' },
+          { id: 4, label: 'Masuk berkas fisik ke bpn' },
+          { id: 5, label: 'Pemeriksaan berkas oleh bpn' },
+          { id: 6, label: 'Berkas dikembalikan atau telah sesuai' },
+          { id: 7, label: 'Pembayaran sps' },
+          { id: 8, label: 'Ruang pengukuran untuk gambar, pemetaan, cetak su' },
+          { id: 9, label: 'Panitia lapang oleh petugas bpn' },
+          { id: 10, label: 'pengumuman' },
+          { id: 11, label: 'Pemeriksaan draft sertifikat' },
+          { id: 12, label: 'Draft sertifikat' },
+          { id: 13, label: 'Penerbitan sertifikat' },
+          { id: 14, label: 'Loket penyerahan produk' },
+          { id: 15, label: 'Penyerahan kepada pemohon' }
+        ];
+      }
+
+      // Default PPAT stages (AJB/HIBAH/APHB/SKMHT/HT/HGB/HAK_PAKAI)
       return [
         { id: 1, label: 'Pengecekan Berkas' },
         { id: 2, label: 'Validasi Sertifikat' },
@@ -57,24 +154,6 @@ export const ClientTrackingPage = () => {
         { id: 16, label: 'Penerbitan Sertifikat' },
         { id: 17, label: 'Loket Penyerahan Produk' },
         { id: 18, label: 'Penyerahan kepada Pemohon' },
-      ];
-    }
-
-    if (c.serviceType === 'APHT') {
-      return [
-        { id: 1, label: 'Pengecekan kelengkapan Berkas' },
-        { id: 2, label: 'Pengecekan sertifikat' },
-        { id: 3, label: 'Pengetikan akta' },
-        { id: 4, label: 'Tanda tangan akta' },
-        { id: 5, label: 'Penomoran akta' },
-        { id: 6, label: 'Pendaftaran akta pada aplikasi mitra kerja atr bpn dan spa' },
-        { id: 7, label: 'Backup pada aplikasi bank' },
-        { id: 8, label: 'Verifikasi berkas oleh bpn melalui aplikasi mutra kerja atr bpn' },
-        { id: 9, label: 'Berkas dikembalikan atau telah diverifikasi oleh bpn' },
-        { id: 10, label: 'Pembayaran sps' },
-        { id: 11, label: 'Verifikasi oleh bpn pada aplikasi bank' },
-        { id: 12, label: 'Penerbitan sht' },
-        { id: 13, label: 'Penyerahan berkas kepada pihak bank' }
       ];
     }
 

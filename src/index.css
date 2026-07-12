@@ -67,34 +67,4 @@ input:focus, select:focus, textarea:focus {
   -webkit-text-fill-color: transparent;
 }
 
-/* Dark Mode support variables/utilities */
-.dark body {
-  @apply bg-[#0F172A] text-[#F8FAFC];
-}
 
-.dark .glass-card {
-  background: rgba(30, 41, 59, 0.7);
-  border-color: rgba(71, 85, 105, 0.4);
-}
-
-.dark .bg-white {
-  background-color: #1E293B !important;
-}
-
-.dark .border-b, .dark .border, .dark .border-r {
-  border-color: rgba(71, 85, 105, 0.4) !important;
-}
-
-.dark input, .dark select, .dark textarea {
-  background-color: #334155 !important;
-  color: #F8FAFC !important;
-  border-color: rgba(71, 85, 105, 0.6) !important;
-}
-
-.dark .text-on-surface, .dark .text-text {
-  color: #F8FAFC !important;
-}
-
-.dark .text-on-surface-variant, .dark .text-muted {
-  color: #94A3B8 !important;
-}
