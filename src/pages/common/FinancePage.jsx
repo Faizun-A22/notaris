@@ -6,6 +6,19 @@ import toast from 'react-hot-toast';
 import DateFilter from '../../components/common/DateFilter';
 import { useAuth } from '../../hooks/useAuth';
 
+const formatNumberWithDots = (num) => {
+  if (num === undefined || num === null || num === '') return '';
+  const clean = String(num).replace(/\D/g, '');
+  if (!clean) return '';
+  return Number(clean).toLocaleString('id-ID');
+};
+
+const parseDotsToNumber = (str) => {
+  if (!str) return 0;
+  const clean = String(str).replace(/\D/g, '');
+  return Number(clean) || 0;
+};
+
 export const FinancePage = () => {
   const { cases, updateCase } = useCases();
   const { profile } = useAuth();
@@ -117,12 +130,9 @@ export const FinancePage = () => {
     let totalOutstanding = 0;
 
     dateFilteredCases.forEach((c) => {
-      // Don't include drafts in total target revenue if they aren't active files
-      if (!c.isDraft) {
-        totalTarget += c.fees || 0;
-        totalReceived += c.paidAmount || 0;
-        totalOutstanding += Math.max(0, (c.fees || 0) - (c.paidAmount || 0));
-      }
+      totalTarget += c.fees || 0;
+      totalReceived += c.paidAmount || 0;
+      totalOutstanding += Math.max(0, (c.fees || 0) - (c.paidAmount || 0));
     });
 
     const percentPaid = totalTarget > 0 ? Math.round((totalReceived / totalTarget) * 100) : 0;
@@ -138,7 +148,6 @@ export const FinancePage = () => {
   // Filtered cases list
   const filteredCases = useMemo(() => {
     return dateFilteredCases.filter((c) => {
-      if (c.isDraft) return false; // Hide drafts from financial statements
 
       const matchesSearch = 
         c.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -410,9 +419,9 @@ export const FinancePage = () => {
                   <span className="absolute left-3 text-[12.5px] font-bold text-on-surface-variant">Rp</span>
                   <input
                     id="edit_fees"
-                    type="number"
-                    value={editFees}
-                    onChange={(e) => handleFeesChange(e.target.value)}
+                    type="text"
+                    value={formatNumberWithDots(editFees)}
+                    onChange={(e) => handleFeesChange(parseDotsToNumber(e.target.value))}
                     className="w-full pl-9 pr-3 py-2 bg-[#F8F9FA] border border-outline-variant rounded-lg text-[12.5px] text-on-surface font-bold focus:outline-none"
                     placeholder="0"
                   />
@@ -428,9 +437,9 @@ export const FinancePage = () => {
                   <span className="absolute left-3 text-[12.5px] font-bold text-on-surface-variant">Rp</span>
                   <input
                     id="edit_paid"
-                    type="number"
-                    value={editPaidAmount}
-                    onChange={(e) => handlePaidAmountChange(e.target.value)}
+                    type="text"
+                    value={formatNumberWithDots(editPaidAmount)}
+                    onChange={(e) => handlePaidAmountChange(parseDotsToNumber(e.target.value))}
                     className="w-full pl-9 pr-3 py-2 bg-[#F8F9FA] border border-outline-variant rounded-lg text-[12.5px] text-on-surface font-bold focus:outline-none"
                     placeholder="0"
                   />

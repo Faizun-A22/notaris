@@ -49,11 +49,9 @@ export const OwnerDashboard = () => {
     let totalOutstanding = 0;
 
     filteredCases.forEach((c) => {
-      if (!c.isDraft) {
-        totalTarget += c.fees || 0;
-        totalReceived += c.paidAmount || 0;
-        totalOutstanding += Math.max(0, (c.fees || 0) - (c.paidAmount || 0));
-      }
+      totalTarget += c.fees || 0;
+      totalReceived += c.paidAmount || 0;
+      totalOutstanding += Math.max(0, (c.fees || 0) - (c.paidAmount || 0));
     });
 
     return {

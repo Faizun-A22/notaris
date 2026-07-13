@@ -4,6 +4,19 @@ import { useCases } from '../../hooks/useCases';
 import { getDefaultChecklist } from '../../contexts/CasesContext';
 import toast from 'react-hot-toast';
 
+const formatNumberWithDots = (num) => {
+  if (num === undefined || num === null || num === '') return '';
+  const clean = String(num).replace(/\D/g, '');
+  if (!clean) return '';
+  return Number(clean).toLocaleString('id-ID');
+};
+
+const parseDotsToNumber = (str) => {
+  if (!str) return 0;
+  const clean = String(str).replace(/\D/g, '');
+  return Number(clean) || 0;
+};
+
 export const CreateDocumentPage = () => {
   const { addCase } = useCases();
   const navigate = useNavigate();
@@ -329,6 +342,20 @@ export const CreateDocumentPage = () => {
     const mappedService = mapServiceTypeToAbbreviation(serviceType);
 
     setTimeout(async () => {
+      // Build final checklist based on uploads
+      const finalChecklist = checklist.map(item => {
+        const fileRecord = uploads[item.id];
+        if (fileRecord && fileRecord.status === 'success') {
+          return {
+            ...item,
+            status: 'Perlu Verifikasi',
+            fileName: fileRecord.name,
+            fileSize: fileRecord.size
+          };
+        }
+        return item;
+      });
+
       try {
         await addCase({
           clientName,
@@ -342,6 +369,7 @@ export const CreateDocumentPage = () => {
           estimationDate: hasEstimationDate ? estimationDate : null,
           entryDate,
           notes: notes || 'Draf berkas terdaftar.',
+          checklist: finalChecklist,
           status: 'Pemeriksaan Dokumen',
           isDraft: true,
           fees: Number(fees),
@@ -672,12 +700,12 @@ export const CreateDocumentPage = () => {
                   <span className="absolute left-3.5 font-bold text-[13px] text-on-surface-variant">Rp</span>
                   <input
                     id="transaction_value"
-                    type="number"
+                    type="text"
                     required
-                    value={transactionValue}
-                    onChange={(e) => setTransactionValue(e.target.value)}
-                    placeholder="Masukkan nominal angka saja"
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface placeholder:text-outline transition-all focus:outline-none focus:border-primary focus:border-2 font-mono"
+                    value={formatNumberWithDots(transactionValue)}
+                    onChange={(e) => setTransactionValue(parseDotsToNumber(e.target.value))}
+                    placeholder="Contoh: 150.000.000"
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface placeholder:text-outline transition-all focus:outline-none focus:border-primary focus:border-2"
                   />
                 </div>
               </div>
@@ -924,11 +952,10 @@ export const CreateDocumentPage = () => {
                     <span className="absolute left-3.5 text-on-surface-variant text-[13px] font-bold">Rp</span>
                     <input
                       id="fees"
-                      type="number"
-                      min="0"
+                      type="text"
                       required
-                      value={fees}
-                      onChange={(e) => handleFeesChange(e.target.value)}
+                      value={formatNumberWithDots(fees)}
+                      onChange={(e) => handleFeesChange(parseDotsToNumber(e.target.value))}
                       className="w-full pl-10 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface font-semibold focus:outline-none focus:border-primary focus:border-2"
                       placeholder="0"
                     />
@@ -944,11 +971,9 @@ export const CreateDocumentPage = () => {
                     <span className="absolute left-3.5 text-on-surface-variant text-[13px] font-bold">Rp</span>
                     <input
                       id="paid_amount"
-                      type="number"
-                      min="0"
-                      max={fees}
-                      value={paidAmount}
-                      onChange={(e) => handlePaidAmountChange(e.target.value)}
+                      type="text"
+                      value={formatNumberWithDots(paidAmount)}
+                      onChange={(e) => handlePaidAmountChange(parseDotsToNumber(e.target.value))}
                       className="w-full pl-10 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface font-semibold focus:outline-none focus:border-primary focus:border-2"
                       placeholder="0"
                     />

@@ -497,13 +497,22 @@ export const CasesProvider = ({ children }) => {
 
       let checklistItems = [];
       if (!templateError && templates && templates.length > 0) {
-        const itemsData = templates.map(t => ({
-          case_id: newDbCase.id,
-          order_num: t.order_num,
-          name: t.name,
-          description: t.description,
-          status: 'Belum Ada'
-        }));
+        const itemsData = templates.map(t => {
+          // Cari apakah item ini ada di caseData.checklist yang diinput user (misal file upload)
+          const userInputItem = (caseData.checklist || []).find(
+            (item) => item.name === t.name || item.orderNum === t.order_num
+          );
+
+          return {
+            case_id: newDbCase.id,
+            order_num: t.order_num,
+            name: t.name,
+            description: t.description,
+            status: userInputItem ? userInputItem.status : 'Belum Ada',
+            file_name: userInputItem ? (userInputItem.fileName || null) : null,
+            file_url: userInputItem ? (userInputItem.fileUrl || null) : null
+          };
+        });
         
         const { data: newItems, error: itemsError } = await supabase
           .from('checklist_items')
@@ -863,6 +872,10 @@ export const CasesProvider = ({ children }) => {
       if (updatedFields.assignedStaffId !== undefined && updatedFields.assignedStaffId !== c.assignedStaffId) {
         dbUpdate.assigned_staff_id = updatedFields.assignedStaffId || null;
         changes.push(`Penugasan staf berkas diperbarui`);
+      }
+      if (updatedFields.isDraft !== undefined && updatedFields.isDraft !== c.isDraft) {
+        dbUpdate.is_draft = updatedFields.isDraft;
+        changes.push(updatedFields.isDraft ? `Berkas diubah menjadi draf` : `Berkas resmi diterbitkan dari draf`);
       }
 
       if (Object.keys(dbUpdate).length > 0) {

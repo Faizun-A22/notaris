@@ -69,11 +69,13 @@ export const Sidebar = ({ isOpen, onClose }) => {
       path: role === ROLES.OWNER ? '/owner/clients' : '/staff/clients',
       icon: 'group',
     },
-    {
-      label: 'Aktivitas Staf',
-      path: role === ROLES.OWNER ? '/owner/activity' : '/staff/activity',
-      icon: 'bar_chart',
-    },
+    ...(role === ROLES.STAFF ? [
+      {
+        label: 'Aktivitas Staf',
+        path: '/staff/activity',
+        icon: 'bar_chart',
+      }
+    ] : []),
     {
       label: 'Pelacakan Publik',
       path: '/track',

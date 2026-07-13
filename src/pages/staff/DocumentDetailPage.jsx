@@ -5,6 +5,19 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useCases } from '../../hooks/useCases';
 import { formatDate } from '../../utils/formatDate';
 
+const formatNumberWithDots = (num) => {
+  if (num === undefined || num === null || num === '') return '';
+  const clean = String(num).replace(/\D/g, '');
+  if (!clean) return '';
+  return Number(clean).toLocaleString('id-ID');
+};
+
+const parseDotsToNumber = (str) => {
+  if (!str) return 0;
+  const clean = String(str).replace(/\D/g, '');
+  return Number(clean) || 0;
+};
+
 const copyToClipboard = (text) => {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     return navigator.clipboard.writeText(text);
@@ -81,6 +94,16 @@ export const DocumentDetailPage = () => {
       setEditPaidAmount(activeCase.paidAmount || 0);
     }
   }, [activeCase]);
+
+  const handlePublishDraft = async () => {
+    try {
+      await updateCase(activeCase.id, { isDraft: false });
+      toast.success('Berkas berhasil diterbitkan dari draf!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal menerbitkan berkas.');
+    }
+  };
 
   const handleSaveDetails = async () => {
     try {
@@ -1124,8 +1147,10 @@ export const DocumentDetailPage = () => {
               <h3 className="font-headline-md text-headline-md font-bold text-on-surface">
                 {activeCase.clientName}
               </h3>
-              <span className="bg-primary-container text-on-primary-container px-3 py-0.5 rounded-full text-[10px] font-label-bold uppercase">
-                {activeCase.isComplete ? 'Selesai' : 'Aktif'}
+              <span className={`px-3 py-0.5 rounded-full text-[10px] font-label-bold uppercase ${
+                activeCase.isDraft ? 'bg-amber-100 text-amber-800' : 'bg-primary-container text-on-primary-container'
+              }`}>
+                {activeCase.isComplete ? 'Selesai' : activeCase.isDraft ? 'Draf' : 'Aktif'}
               </span>
             </div>
             <p className="text-on-surface-variant flex items-center gap-1.5 text-body-md mt-1 font-medium">
@@ -1140,13 +1165,24 @@ export const DocumentDetailPage = () => {
             <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase ${
               activeCase.isComplete 
                 ? 'bg-secondary-container text-on-secondary-container' 
+                : activeCase.isDraft
+                ? 'bg-amber-100 text-amber-800 border border-amber-300'
                 : !activeCase.documentsReady 
                 ? 'bg-amber-100 text-amber-800 border border-amber-300' 
                 : 'bg-green-100 text-green-800 border border-green-300'
             }`}>
-              {activeCase.isComplete ? 'Selesai' : !activeCase.documentsReady ? 'Menunggu Klien' : 'Aktif Diproses'}
+              {activeCase.isComplete ? 'Selesai' : activeCase.isDraft ? 'Menunggu Diterbitkan' : !activeCase.documentsReady ? 'Menunggu Klien' : 'Aktif Diproses'}
             </span>
           </div>
+          {activeCase.isDraft && (
+            <button
+              onClick={handlePublishDraft}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-label-bold transition-colors text-[13px] font-semibold flex items-center gap-1.5 shadow-md shrink-0"
+            >
+              <span className="material-symbols-outlined text-[16px]">publish</span>
+              <span>Terbitkan Berkas</span>
+            </button>
+          )}
           <button
             onClick={() => setShowShareModal(true)}
             className="px-4 py-2 border border-primary text-primary rounded-lg font-label-bold hover:bg-primary/5 transition-colors text-[13px] font-semibold bg-white flex items-center gap-1.5 shadow-sm"
@@ -2064,10 +2100,10 @@ export const DocumentDetailPage = () => {
                     Biaya Akta (Rupiah)
                   </label>
                   <input
-                    type="number"
-                    value={editFees}
+                    type="text"
+                    value={formatNumberWithDots(editFees)}
                     onChange={(e) => {
-                      const val = Number(e.target.value) || 0;
+                      const val = parseDotsToNumber(e.target.value);
                       setEditFees(val);
                       if (editPaidAmount >= val && val > 0) {
                         setEditPaymentStatus('Lunas');
@@ -2078,7 +2114,7 @@ export const DocumentDetailPage = () => {
                       }
                     }}
                     className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none font-semibold"
-                    placeholder="Contoh: 12000000"
+                    placeholder="Contoh: 12.000.000"
                   />
                 </div>
 
@@ -2088,10 +2124,10 @@ export const DocumentDetailPage = () => {
                     Nominal Dibayar (Rupiah)
                   </label>
                   <input
-                    type="number"
-                    value={editPaidAmount}
+                    type="text"
+                    value={formatNumberWithDots(editPaidAmount)}
                     onChange={(e) => {
-                      const val = Number(e.target.value) || 0;
+                      const val = parseDotsToNumber(e.target.value);
                       setEditPaidAmount(val);
                       if (val >= editFees && editFees > 0) {
                         setEditPaymentStatus('Lunas');
@@ -2102,7 +2138,7 @@ export const DocumentDetailPage = () => {
                       }
                     }}
                     className="w-full bg-[#F8F9FA] border border-outline-variant rounded-lg px-3 py-2 text-[12.5px] text-on-surface focus:outline-none font-semibold"
-                    placeholder="Contoh: 5000000"
+                    placeholder="Contoh: 5.000.000"
                   />
                 </div>
 
