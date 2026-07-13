@@ -6,7 +6,7 @@ export const useRedAlert = () => {
   const { cases } = useCases();
 
   const overdueCases = useMemo(() => {
-    return cases.filter((c) => checkOverdue(c.estimationDate, c.status));
+    return cases.filter((c) => !c.isDraft && checkOverdue(c.estimationDate, c.status));
   }, [cases]);
 
   return {

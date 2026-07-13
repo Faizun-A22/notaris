@@ -1,16 +1,37 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCases } from '../../hooks/useCases';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { formatDate } from '../../utils/formatDate';
 import { SERVICE_TYPES, SERVICE_CATEGORIES, getCaseCategory } from '../../constants/serviceTypes';
+import DateFilter from '../../components/common/DateFilter';
+import { supabase } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 export const OwnerDocumentsPage = () => {
-  const { cases, updateCaseStatus, toggleDocStatus, deleteCase } = useCases();
+  const { cases, updateCaseStatus, toggleDocStatus, deleteCase, updateCase } = useCases();
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Semua');
   const [filterService, setFilterService] = useState('Semua');
+  const [filterDate, setFilterDate] = useState('ALL');
+  const [filterMonth, setFilterMonth] = useState('ALL');
+  const [filterYear, setFilterYear] = useState('ALL');
   const [selectedCase, setSelectedCase] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [staffList, setStaffList] = useState([]);
+
+  // Fetch all staff profiles for assignment dropdown
+  useEffect(() => {
+    const fetchStaff = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'staff');
+      if (!error && data) {
+        setStaffList(data);
+      }
+    };
+    fetchStaff();
+  }, []);
 
   // Dynamically derive service options based on selected category
   const serviceOptions = useMemo(() => {
@@ -32,9 +53,21 @@ export const OwnerDocumentsPage = () => {
       const matchCategory = filterCategory === 'Semua' || categoryOfCase === filterCategory;
       
       const matchService = filterService === 'Semua' || c.serviceType === filterService;
+
+      // Period filter check
+      if (!c.entryDate) return false;
+      const [yStr, mStr, dStr] = c.entryDate.split('-');
+      const cYear = parseInt(yStr, 10);
+      const cMonth = parseInt(mStr, 10);
+      const cDay = parseInt(dStr, 10);
+
+      if (filterYear !== 'ALL' && cYear !== parseInt(filterYear, 10)) return false;
+      if (filterMonth !== 'ALL' && cMonth !== parseInt(filterMonth, 10)) return false;
+      if (filterDate !== 'ALL' && cDay !== parseInt(filterDate, 10)) return false;
+
       return matchSearch && matchCategory && matchService;
     });
-  }, [cases, search, filterCategory, filterService]);
+  }, [cases, search, filterCategory, filterService, filterDate, filterMonth, filterYear]);
 
   const handleDelete = (id) => {
     deleteCase(id);
@@ -107,12 +140,25 @@ export const OwnerDocumentsPage = () => {
           ))}
         </select>
 
-        {(search || filterCategory !== 'Semua' || filterService !== 'Semua') && (
+        {/* Date Filter */}
+        <DateFilter
+          date={filterDate}
+          month={filterMonth}
+          year={filterYear}
+          onDateChange={setFilterDate}
+          onMonthChange={setFilterMonth}
+          onYearChange={setFilterYear}
+        />
+
+        {(search || filterCategory !== 'Semua' || filterService !== 'Semua' || filterDate !== 'ALL' || filterMonth !== 'ALL' || filterYear !== 'ALL') && (
           <button
             onClick={() => {
               setSearch('');
               setFilterCategory('Semua');
               setFilterService('Semua');
+              setFilterDate('ALL');
+              setFilterMonth('ALL');
+              setFilterYear('ALL');
             }}
             className="py-2.5 px-3 text-error border border-error/30 rounded-lg text-[12px] font-bold hover:bg-error/5 transition-colors flex items-center gap-1"
           >
@@ -207,17 +253,46 @@ export const OwnerDocumentsPage = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: 'ID Klien', value: selectedCase.clientId },
-                { label: 'Layanan', value: SERVICE_TYPES[selectedCase.serviceType]?.label || selectedCase.serviceType },
-                { label: 'Tenggat', value: formatDate(selectedCase.estimationDate) },
-                { label: 'Staf', value: selectedCase.assignedStaff },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-surface-container-low rounded-lg p-3">
-                  <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{label}</p>
-                  <p className="font-semibold text-on-surface text-[13px] mt-0.5">{value}</p>
-                </div>
-              ))}
+              <div className="bg-surface-container-low rounded-lg p-3">
+                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">ID Klien</p>
+                <p className="font-semibold text-on-surface text-[13px] mt-0.5">{selectedCase.clientId}</p>
+              </div>
+              <div className="bg-surface-container-low rounded-lg p-3">
+                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Layanan</p>
+                <p className="font-semibold text-on-surface text-[13px] mt-0.5">{SERVICE_TYPES[selectedCase.serviceType]?.label || selectedCase.serviceType}</p>
+              </div>
+              <div className="bg-surface-container-low rounded-lg p-3">
+                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Tenggat</p>
+                <p className="font-semibold text-on-surface text-[13px] mt-0.5">{formatDate(selectedCase.estimationDate)}</p>
+              </div>
+              <div className="bg-surface-container-low rounded-lg p-3">
+                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Petugas Staf</p>
+                <select
+                  value={selectedCase.assignedStaffId || ''}
+                  onChange={async (e) => {
+                    const nextId = e.target.value || null;
+                    try {
+                      await updateCase(selectedCase.id, { assignedStaffId: nextId });
+                      const matchedStaff = staffList.find(st => st.id === nextId);
+                      setSelectedCase(prev => ({
+                        ...prev,
+                        assignedStaffId: nextId,
+                        assignedStaff: matchedStaff ? matchedStaff.full_name : 'Belum ditugaskan'
+                      }));
+                      toast.success('Petugas staf berhasil ditugaskan!');
+                    } catch (err) {
+                      console.error(err);
+                      toast.error('Gagal menugaskan petugas staf.');
+                    }
+                  }}
+                  className="bg-transparent font-semibold text-on-surface text-[13px] mt-0.5 w-full focus:outline-none border-none cursor-pointer text-left"
+                >
+                  <option value="">Belum ditugaskan</option>
+                  {staffList.map((st) => (
+                    <option key={st.id} value={st.id}>{st.full_name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Notes */}

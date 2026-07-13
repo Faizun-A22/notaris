@@ -46,8 +46,10 @@ const copyToClipboard = (text) => {
   }
 };
 
+import DateFilter from '../../components/common/DateFilter';
+
 export const StaffDocumentsPage = () => {
-  const { searchVal } = useOutletContext();
+  const [searchVal, setSearchVal] = useState('');
   const navigate = useNavigate();
   const { cases, updateCaseStatus, toggleDocStatus, deleteCase } = useCases();
   const { user } = useAuth();
@@ -56,6 +58,9 @@ export const StaffDocumentsPage = () => {
   const [sortBy, setSortBy] = useState('newest'); // newest | belum | selesai
   const [selectedCase, setSelectedCase] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [filterDate, setFilterDate] = useState('ALL');
+  const [filterMonth, setFilterMonth] = useState('ALL');
+  const [filterYear, setFilterYear] = useState('ALL');
 
   // Share link states
   const [showShareModal, setShowShareModal] = useState(false);
@@ -69,6 +74,18 @@ export const StaffDocumentsPage = () => {
         c.clientName.toLowerCase().includes((searchVal || '').toLowerCase()) ||
         c.caseNumber.toLowerCase().includes((searchVal || '').toLowerCase());
       const matchCategory = filterCategory === 'Semua' || getCaseCategory(c) === filterCategory;
+
+      // Period filter check
+      if (!c.entryDate) return false;
+      const [yStr, mStr, dStr] = c.entryDate.split('-');
+      const cYear = parseInt(yStr, 10);
+      const cMonth = parseInt(mStr, 10);
+      const cDay = parseInt(dStr, 10);
+
+      if (filterYear !== 'ALL' && cYear !== parseInt(filterYear, 10)) return false;
+      if (filterMonth !== 'ALL' && cMonth !== parseInt(filterMonth, 10)) return false;
+      if (filterDate !== 'ALL' && cDay !== parseInt(filterDate, 10)) return false;
+
       return matchSearch && matchCategory;
     });
 
@@ -206,37 +223,65 @@ export const StaffDocumentsPage = () => {
       </div>
 
       {/* Controls */}
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Kategori:</span>
-          <div className="flex gap-1.5">
-            {['Semua', SERVICE_CATEGORIES.PPAT, SERVICE_CATEGORIES.NOTARIS].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setFilterCategory(cat)}
-                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all border ${
-                  filterCategory === cat
-                    ? 'bg-inverse-surface text-inverse-on-surface border-inverse-surface'
-                    : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-col gap-4">
+        {/* Row 1: Search & Date Filter */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[220px] max-w-md text-left">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+            <input
+              type="text"
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+              placeholder="Cari nama klien atau nomor berkas..."
+              className="w-full pl-9 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary text-[13px]"
+            />
           </div>
+          
+          {/* Date Filter */}
+          <DateFilter
+            date={filterDate}
+            month={filterMonth}
+            year={filterYear}
+            onDateChange={setFilterDate}
+            onMonthChange={setFilterMonth}
+            onYearChange={setFilterYear}
+          />
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-on-surface-variant font-bold">Urutkan:</span>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="py-2 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-[12px] font-semibold focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          >
-            <option value="newest">Terbaru</option>
-            <option value="belum">Belum Lengkap</option>
-            <option value="selesai">Selesai</option>
-          </select>
+        {/* Row 2: Category & Sorting */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-outline-variant/60">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Kategori:</span>
+            <div className="flex gap-1.5">
+              {['Semua', SERVICE_CATEGORIES.PPAT, SERVICE_CATEGORIES.NOTARIS].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setFilterCategory(cat)}
+                  className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all border ${
+                    filterCategory === cat
+                      ? 'bg-inverse-surface text-inverse-on-surface border-inverse-surface'
+                      : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-on-surface-variant font-bold">Urutkan:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="py-2 px-3 bg-surface-container-low border border-outline-variant rounded-lg text-[12px] font-semibold focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="newest">Terbaru</option>
+              <option value="belum">Belum Lengkap</option>
+              <option value="selesai">Selesai</option>
+            </select>
+          </div>
         </div>
       </div>
 

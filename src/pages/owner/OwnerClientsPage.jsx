@@ -26,12 +26,44 @@ function deriveClients(cases) {
   return Object.values(map);
 }
 
+import DateFilter from '../../components/common/DateFilter';
+import { useAuth } from '../../hooks/useAuth';
+
 export const OwnerClientsPage = () => {
-  const { cases } = useCases();
+  const { cases: allCases } = useCases();
+  const { profile } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
+  const [filterDate, setFilterDate] = useState('ALL');
+  const [filterMonth, setFilterMonth] = useState('ALL');
+  const [filterYear, setFilterYear] = useState('ALL');
 
-  const clients = useMemo(() => deriveClients(cases), [cases]);
+  // Filter cases if user is staff (security safeguard)
+  const cases = useMemo(() => {
+    if (profile?.role === 'staff') {
+      return allCases.filter(c => c.assignedStaffId === profile.id);
+    }
+    return allCases;
+  }, [allCases, profile]);
+
+  // Filter cases dynamically by selected period
+  const dateFilteredCases = useMemo(() => {
+    return cases.filter((c) => {
+      if (!c.entryDate) return false;
+      const [yStr, mStr, dStr] = c.entryDate.split('-');
+      const cYear = parseInt(yStr, 10);
+      const cMonth = parseInt(mStr, 10);
+      const cDay = parseInt(dStr, 10);
+
+      if (filterYear !== 'ALL' && cYear !== parseInt(filterYear, 10)) return false;
+      if (filterMonth !== 'ALL' && cMonth !== parseInt(filterMonth, 10)) return false;
+      if (filterDate !== 'ALL' && cDay !== parseInt(filterDate, 10)) return false;
+
+      return true;
+    });
+  }, [cases, filterDate, filterMonth, filterYear]);
+
+  const clients = useMemo(() => deriveClients(dateFilteredCases), [dateFilteredCases]);
 
   const filtered = useMemo(
     () => clients.filter((cl) =>
@@ -73,15 +105,26 @@ export const OwnerClientsPage = () => {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari nama klien atau ID klien..."
-          className="w-full pl-9 pr-4 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-xl text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary text-[13px]"
+      {/* Search & Period Filter Row */}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-wrap gap-4 items-center justify-between">
+        <div className="relative flex-1 max-w-md text-left">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari nama klien atau ID NIK..."
+            className="w-full pl-9 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary text-[13px]"
+          />
+        </div>
+
+        <DateFilter
+          date={filterDate}
+          month={filterMonth}
+          year={filterYear}
+          onDateChange={setFilterDate}
+          onMonthChange={setFilterMonth}
+          onYearChange={setFilterYear}
         />
       </div>
 

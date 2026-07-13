@@ -5,8 +5,9 @@ import { formatDate } from '../../../utils/formatDate';
 import { checkOverdue } from '../../../utils/checkOverdue';
 import { SERVICE_TYPES } from '../../../constants/serviceTypes';
 
-export const CaseTable = ({ searchVal = '' }) => {
-  const { cases, updateCaseStatus, deleteCase } = useCases();
+export const CaseTable = ({ searchVal = '', casesList }) => {
+  const { cases: allCases, updateCaseStatus, deleteCase } = useCases();
+  const cases = casesList || allCases;
   const navigate = useNavigate();
 
   // Filters State

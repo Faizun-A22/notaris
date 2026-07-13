@@ -764,7 +764,7 @@ export const DocumentDetailPage = () => {
       return stages.length + 1; // All completed
     }
     
-    if (activeCase.currentStageId !== undefined) {
+    if (activeCase.currentStageId !== undefined && activeCase.currentStageId !== null && activeCase.currentStageId !== 0) {
       return activeCase.currentStageId;
     }
     

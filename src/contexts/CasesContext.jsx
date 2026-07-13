@@ -332,6 +332,34 @@ export const CasesProvider = ({ children }) => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Helper to prepend dynamic activities locally
+  const prependActivity = (rawLog) => {
+    if (!rawLog) return;
+    
+    let targetLabel = 'Sistem';
+    if (rawLog.cases) {
+      targetLabel = `${rawLog.cases.client_name || rawLog.cases.clientName} (${rawLog.cases.case_number || rawLog.cases.caseNumber})`;
+    } else {
+      const c = cases.find(item => item.id === rawLog.case_id);
+      if (c) {
+        targetLabel = `${c.clientName} (${c.caseNumber})`;
+      }
+    }
+
+    const mapped = {
+      id: rawLog.id,
+      user: rawLog.user_name,
+      role: rawLog.user_role === 'staff' ? 'Staf Administrasi' : 'Ketua Notaris',
+      category: rawLog.category ? rawLog.category.toUpperCase() : 'PPAT',
+      action: rawLog.action,
+      target: targetLabel,
+      timestamp: new Date(rawLog.created_at).toLocaleDateString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      icon: rawLog.icon || 'history'
+    };
+    
+    setActivities(prev => [mapped, ...prev].slice(0, 30));
+  };
+
   // Ambil data berkas dari database Supabase
   const fetchCasesFromSupabase = async () => {
     setLoading(true);
@@ -407,7 +435,18 @@ export const CasesProvider = ({ children }) => {
     if (user) {
       const nextIndex = cases.length + 1;
       const caseNumber = generateCaseNumber(nextIndex);
-      const clientId = caseData.clientId || `CLI-${String(Math.floor(100 + Math.random() * 900))}`;
+      
+      let clientId = caseData.clientId;
+      if (!clientId) {
+        const existingCase = cases.find(
+          (c) =>
+            (c.clientName && caseData.clientName && c.clientName.toLowerCase().trim() === caseData.clientName.toLowerCase().trim()) ||
+            (c.clientEmail && caseData.clientEmail && c.clientEmail.toLowerCase().trim() === caseData.clientEmail.toLowerCase().trim()) ||
+            (c.clientPhone && caseData.clientPhone && c.clientPhone === caseData.clientPhone)
+        );
+        clientId = existingCase ? existingCase.clientId : `CLI-${String(Math.floor(100 + Math.random() * 900))}`;
+      }
+
       const serviceType = caseData.serviceType || 'SKMHT';
       
       const dbCaseData = {
@@ -480,8 +519,8 @@ export const CasesProvider = ({ children }) => {
       const logData = {
         case_id: newDbCase.id,
         user_id: user.id,
-        user_name: user.email?.split('@')[0] || 'Staf',
-        user_role: 'staff',
+        user_name: profile?.full_name || user.email?.split('@')[0] || 'Staf',
+        user_role: profile?.role || 'staff',
         category: newDbCase.category,
         action: 'Berkas didaftarkan / berkas masuk ke dalam sistem',
         icon: 'history'
@@ -492,6 +531,16 @@ export const CasesProvider = ({ children }) => {
         .insert(logData)
         .select()
         .single();
+
+      if (newLog) {
+        prependActivity({
+          ...newLog,
+          cases: {
+            case_number: newDbCase.case_number,
+            client_name: newDbCase.client_name
+          }
+        });
+      }
 
       // Refetch untuk memuat relasi (assigned_staff, dll) dengan lengkap
       const { data: fullCase, error: fetchErr } = await supabase
@@ -609,8 +658,8 @@ export const CasesProvider = ({ children }) => {
       const logData = {
         case_id: id,
         user_id: user.id,
-        user_name: user.email?.split('@')[0] || 'Staf',
-        user_role: 'staff',
+        user_name: profile?.full_name || user.email?.split('@')[0] || 'Staf',
+        user_role: profile?.role || 'staff',
         category: c.category,
         action: `Tahapan pengerjaan akta diubah ke: ${status}`,
         icon: 'history'
@@ -621,6 +670,8 @@ export const CasesProvider = ({ children }) => {
         .insert(logData)
         .select()
         .single();
+
+      if (newLog) prependActivity(newLog);
 
       setCases(prev => prev.map(item => {
         if (item.id === id) {
@@ -729,8 +780,8 @@ export const CasesProvider = ({ children }) => {
       const logData = {
         case_id: id,
         user_id: user.id,
-        user_name: user.email?.split('@')[0] || 'Staf',
-        user_role: 'staff',
+        user_name: profile?.full_name || user.email?.split('@')[0] || 'Staf',
+        user_role: profile?.role || 'staff',
         category: c.category,
         action: `Tahap pengerjaan diperbarui ke: ${stageId}. ${stageLabel} (Status: ${status})`,
         icon: 'history'
@@ -741,6 +792,8 @@ export const CasesProvider = ({ children }) => {
         .insert(logData)
         .select()
         .single();
+
+      if (newLog) prependActivity(newLog);
 
       setCases(prev => prev.map(item => {
         if (item.id === id) {
@@ -807,6 +860,10 @@ export const CasesProvider = ({ children }) => {
         dbUpdate.paid_amount = Number(updatedFields.paidAmount);
         changes.push(`Jumlah pembayaran diubah menjadi Rp ${Number(updatedFields.paidAmount).toLocaleString('id-ID')}`);
       }
+      if (updatedFields.assignedStaffId !== undefined && updatedFields.assignedStaffId !== c.assignedStaffId) {
+        dbUpdate.assigned_staff_id = updatedFields.assignedStaffId || null;
+        changes.push(`Penugasan staf berkas diperbarui`);
+      }
 
       if (Object.keys(dbUpdate).length > 0) {
         const { error: updateError } = await supabase
@@ -819,18 +876,24 @@ export const CasesProvider = ({ children }) => {
           throw new Error(updateError.message);
         }
 
-        // Tulis log aktivitas untuk setiap perubahan
-        for (const change of changes) {
-          const logData = {
+        // Tulis log aktivitas untuk setiap perubahan (Bulk Insert)
+        if (changes.length > 0) {
+          const logsArray = changes.map(change => ({
             case_id: id,
             user_id: user.id,
-            user_name: user.email?.split('@')[0] || 'Staf',
-            user_role: 'staff',
+            user_name: profile?.full_name || user.email?.split('@')[0] || 'Staf',
+            user_role: profile?.role || 'staff',
             category: c.category,
             action: change,
             icon: 'history'
-          };
-          await supabase.from('activity_logs').insert(logData);
+          }));
+          const { data: newLogs, error: logErr } = await supabase
+            .from('activity_logs')
+            .insert(logsArray)
+            .select();
+          if (!logErr && newLogs) {
+            newLogs.forEach(newLog => prependActivity(newLog));
+          }
         }
       }
 
@@ -934,15 +997,21 @@ export const CasesProvider = ({ children }) => {
       const logData = {
         case_id: id,
         user_id: user.id,
-        user_name: user.email?.split('@')[0] || 'Staf',
-        user_role: 'staff',
+        user_name: profile?.full_name || user.email?.split('@')[0] || 'Staf',
+        user_role: profile?.role || 'staff',
         category: c.category,
         action: nextDocStatus 
           ? 'Konfirmasi kelengkapan berkas: DOKUMEN LENGKAP' 
           : 'Konfirmasi kelengkapan berkas: DOKUMEN BELUM LENGKAP',
         icon: 'history'
       };
-      await supabase.from('activity_logs').insert(logData);
+      const { data: newLog } = await supabase
+        .from('activity_logs')
+        .insert(logData)
+        .select()
+        .single();
+      
+      if (newLog) prependActivity(newLog);
 
       // Refresh
       const { data: refreshedCases } = await supabase

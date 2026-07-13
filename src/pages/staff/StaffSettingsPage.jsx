@@ -38,6 +38,7 @@ export const StaffSettingsPage = () => {
   const [title, setTitle] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [avatar, setAvatar] = useState('');
 
   // Sync profile data once loaded
   useEffect(() => {
@@ -46,10 +47,26 @@ export const StaffSettingsPage = () => {
       setTitle(profile.title || '');
       setEmail(profile.email || user?.email || '');
       setPhone(profile.phone || '');
+      setAvatar(profile.avatar_url || '');
     } else if (user) {
       setEmail(user.email || '');
     }
   }, [profile, user]);
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // limit 2MB
+        toast.error('Ukuran gambar maksimal adalah 2MB!');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatar(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Security
   const [currentPass, setCurrentPass] = useState('');
@@ -72,7 +89,8 @@ export const StaffSettingsPage = () => {
             full_name: name,
             title: title,
             email: email,
-            phone: phone
+            phone: phone,
+            avatar_url: avatar
           })
           .eq('id', user.id);
 
@@ -132,7 +150,7 @@ export const StaffSettingsPage = () => {
     navigate('/login');
   };
 
-  const avatarUrl = profile?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80';
+  const avatarUrl = avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80';
 
   return (
     <div className="max-w-3xl space-y-stack-lg text-left">
@@ -161,7 +179,18 @@ export const StaffSettingsPage = () => {
                 alt="Avatar"
                 className="w-20 h-20 rounded-full object-cover border-4 border-primary-container"
               />
-              <button className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-md hover:opacity-90 transition-all">
+              <input
+                type="file"
+                id="avatarInput"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+              <button 
+                type="button"
+                onClick={() => document.getElementById('avatarInput').click()}
+                className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-md hover:opacity-90 transition-all cursor-pointer"
+              >
                 <span className="material-symbols-outlined text-[14px]">edit</span>
               </button>
             </div>

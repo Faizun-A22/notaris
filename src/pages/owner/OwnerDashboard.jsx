@@ -1,32 +1,86 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useCases } from '../../hooks/useCases';
 import { useRedAlert } from '../../hooks/useRedAlert';
 import MetricCard from '../../components/common/MetricCard';
 import UrgentAlerts from '../../components/features/owner/UrgentAlerts';
 import RecentActivity from '../../components/features/owner/RecentActivity';
+import DateFilter from '../../components/common/DateFilter';
 
 export const OwnerDashboard = () => {
   const { cases } = useCases();
   const { count: overdueCount } = useRedAlert();
 
-  // Dynamic calculations based on Cases Context state
-  const totalCount = cases.length;
-  const completedCount = cases.filter((c) => c.status === 'Selesai').length;
+  // Period Filter State
+  const [filterDate, setFilterDate] = useState('ALL');
+  const [filterMonth, setFilterMonth] = useState('ALL');
+  const [filterYear, setFilterYear] = useState('ALL');
+
+  // Filter cases dynamically by selected period
+  const filteredCases = useMemo(() => {
+    return cases.filter((c) => {
+      if (!c.entryDate) return false;
+      const [yStr, mStr, dStr] = c.entryDate.split('-');
+      const cYear = parseInt(yStr, 10);
+      const cMonth = parseInt(mStr, 10);
+      const cDay = parseInt(dStr, 10);
+
+      if (filterYear !== 'ALL' && cYear !== parseInt(filterYear, 10)) return false;
+      if (filterMonth !== 'ALL' && cMonth !== parseInt(filterMonth, 10)) return false;
+      if (filterDate !== 'ALL' && cDay !== parseInt(filterDate, 10)) return false;
+
+      return true;
+    });
+  }, [cases, filterDate, filterMonth, filterYear]);
+
+  // Dynamic calculations based on filtered state
+  const totalCount = filteredCases.length;
+  const completedCount = filteredCases.filter((c) => c.status === 'Selesai').length;
+
+  // Derive unique clients count based on filtered cases
+  const activeClientsCount = useMemo(() => {
+    const clients = new Set(filteredCases.map(c => c.clientId));
+    return clients.size;
+  }, [filteredCases]);
+
+  // Calculate finance metrics based on filtered cases
+  const financeStats = useMemo(() => {
+    let totalTarget = 0;
+    let totalReceived = 0;
+    let totalOutstanding = 0;
+
+    filteredCases.forEach((c) => {
+      if (!c.isDraft) {
+        totalTarget += c.fees || 0;
+        totalReceived += c.paidAmount || 0;
+        totalOutstanding += Math.max(0, (c.fees || 0) - (c.paidAmount || 0));
+      }
+    });
+
+    return {
+      totalTarget,
+      totalReceived,
+      totalOutstanding
+    };
+  }, [filteredCases]);
 
   return (
     <div className="space-y-8 font-sans">
       
       {/* Dashboard Header (24px - 30px size range) */}
-      <div className="mb-8 flex justify-between items-end text-left">
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end text-left gap-4">
         <div>
           <h2 className="text-[30px] font-extrabold text-text tracking-tight">Executive Overview</h2>
           <p className="text-[14px] text-muted mt-1.5 font-medium">Real-time operational performance of NotaryDoc Pro.</p>
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-5 h-11 border border-outline-variant rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-body-md font-semibold text-[14px]">
-            <span className="material-symbols-outlined text-[20px]">calendar_month</span>
-            Last 30 Days
-          </button>
+        <div className="flex gap-3 items-center flex-wrap">
+          <DateFilter
+            date={filterDate}
+            month={filterMonth}
+            year={filterYear}
+            onDateChange={setFilterDate}
+            onMonthChange={setFilterMonth}
+            onYearChange={setFilterYear}
+          />
           <button className="flex items-center gap-2 px-5 h-11 border border-outline-variant rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-body-md font-semibold text-[14px]">
             <span className="material-symbols-outlined text-[20px]">download</span>
             Export Report
@@ -50,7 +104,7 @@ export const OwnerDashboard = () => {
         {/* KPI Card 2: Active Clients */}
         <MetricCard
           title="Active Clients"
-          value={(totalCount * 3 + 2).toLocaleString()} // mock active scale based on actual cases
+          value={activeClientsCount.toLocaleString()}
           icon="group"
           color="secondary"
           footerText="Active consulting client portfolios"
@@ -85,6 +139,28 @@ export const OwnerDashboard = () => {
             />
           </div>
           <p className="text-[12px] text-on-surface-variant mt-3 text-right">Target: 100% Completion</p>
+        </div>
+      </div>
+
+      {/* Financial Overview Section */}
+      <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm text-left">
+        <h3 className="text-[18px] font-bold text-on-surface mb-4 flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary">payments</span>
+          Ringkasan Keuangan Periode Terpilih
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-[#ECFDF5] border border-[#A7F3D0] p-4 rounded-xl flex flex-col justify-between min-h-[90px]">
+            <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Total Target Biaya Berkas</p>
+            <p className="text-[20px] font-extrabold text-emerald-900 mt-1">Rp {financeStats.totalTarget.toLocaleString('id-ID')}</p>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex flex-col justify-between min-h-[90px]">
+            <p className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Dana Masuk (Diterima)</p>
+            <p className="text-[20px] font-extrabold text-blue-900 mt-1">Rp {financeStats.totalReceived.toLocaleString('id-ID')}</p>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex flex-col justify-between min-h-[90px]">
+            <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Piutang Berjalan (Outstanding)</p>
+            <p className="text-[20px] font-extrabold text-amber-900 mt-1">Rp {financeStats.totalOutstanding.toLocaleString('id-ID')}</p>
+          </div>
         </div>
       </div>
 

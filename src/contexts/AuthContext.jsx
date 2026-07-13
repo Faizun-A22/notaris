@@ -26,6 +26,14 @@ export const AuthProvider = ({ children }) => {
       });
       return null;
     }
+
+    // Check if the user has been deactivated by owner
+    if (data && data.is_active === false) {
+      console.warn('[AuthContext] Akun ini telah dinonaktifkan oleh owner.');
+      await supabase.auth.signOut();
+      return null;
+    }
+
     return data;
   };
 
@@ -33,9 +41,14 @@ export const AuthProvider = ({ children }) => {
     // Cek session yang sudah ada saat app pertama kali load
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        setUser(session.user);
         const prof = await fetchProfile(session.user.id);
-        setProfile(prof);
+        if (prof) {
+          setUser(session.user);
+          setProfile(prof);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
       }
       setLoading(false);
     });
@@ -44,9 +57,14 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          setUser(session.user);
           const prof = await fetchProfile(session.user.id);
-          setProfile(prof);
+          if (prof) {
+            setUser(session.user);
+            setProfile(prof);
+          } else {
+            setUser(null);
+            setProfile(null);
+          }
         } else {
           setUser(null);
           setProfile(null);

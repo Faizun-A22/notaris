@@ -3,13 +3,21 @@ import { useCases } from '../../hooks/useCases';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import toast from 'react-hot-toast';
 
+import DateFilter from '../../components/common/DateFilter';
+import { useAuth } from '../../hooks/useAuth';
+
 export const FinancePage = () => {
   const { cases, updateCase } = useCases();
+  const { profile } = useAuth();
+  const isOwner = profile?.role === 'owner';
 
   // Local UI filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Semua');
   const [serviceFilter, setServiceFilter] = useState('Semua');
+  const [filterDate, setFilterDate] = useState('ALL');
+  const [filterMonth, setFilterMonth] = useState('ALL');
+  const [filterYear, setFilterYear] = useState('ALL');
 
   // Modal State
   const [editingCase, setEditingCase] = useState(null);
@@ -85,13 +93,30 @@ export const FinancePage = () => {
     return ['Semua', ...Array.from(services)];
   }, [cases]);
 
+  // Filter cases dynamically by selected period
+  const dateFilteredCases = useMemo(() => {
+    return cases.filter((c) => {
+      if (!c.entryDate) return false;
+      const [yStr, mStr, dStr] = c.entryDate.split('-');
+      const cYear = parseInt(yStr, 10);
+      const cMonth = parseInt(mStr, 10);
+      const cDay = parseInt(dStr, 10);
+
+      if (filterYear !== 'ALL' && cYear !== parseInt(filterYear, 10)) return false;
+      if (filterMonth !== 'ALL' && cMonth !== parseInt(filterMonth, 10)) return false;
+      if (filterDate !== 'ALL' && cDay !== parseInt(filterDate, 10)) return false;
+
+      return true;
+    });
+  }, [cases, filterDate, filterMonth, filterYear]);
+
   // Calculations for Financial Summary Cards
   const stats = useMemo(() => {
     let totalTarget = 0;
     let totalReceived = 0;
     let totalOutstanding = 0;
 
-    cases.forEach((c) => {
+    dateFilteredCases.forEach((c) => {
       // Don't include drafts in total target revenue if they aren't active files
       if (!c.isDraft) {
         totalTarget += c.fees || 0;
@@ -108,11 +133,11 @@ export const FinancePage = () => {
       totalOutstanding,
       percentPaid
     };
-  }, [cases]);
+  }, [dateFilteredCases]);
 
   // Filtered cases list
   const filteredCases = useMemo(() => {
-    return cases.filter((c) => {
+    return dateFilteredCases.filter((c) => {
       if (c.isDraft) return false; // Hide drafts from financial statements
 
       const matchesSearch = 
@@ -129,7 +154,7 @@ export const FinancePage = () => {
 
       return matchesSearch && matchesStatus && matchesService;
     });
-  }, [cases, searchQuery, statusFilter, serviceFilter]);
+  }, [dateFilteredCases, searchQuery, statusFilter, serviceFilter]);
 
   return (
     <div className="space-y-6 font-sans text-left">
@@ -231,7 +256,17 @@ export const FinancePage = () => {
             />
           </div>
 
-          <div className="flex gap-4 w-full md:w-auto">
+          <div className="flex flex-wrap gap-4 w-full md:w-auto items-center">
+            {/* Date Filter */}
+            <DateFilter
+              date={filterDate}
+              month={filterMonth}
+              year={filterYear}
+              onDateChange={setFilterDate}
+              onMonthChange={setFilterMonth}
+              onYearChange={setFilterYear}
+            />
+
             {/* Filter Layanan */}
             <div className="flex-1 md:w-44">
               <select
@@ -239,7 +274,7 @@ export const FinancePage = () => {
                 onChange={(e) => setServiceFilter(e.target.value)}
                 className="w-full px-3 py-2.5 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface font-semibold focus:outline-none"
               >
-                <option disabled>Filter Layanan</option>
+                <option value="Semua">Semua Layanan</option>
                 {serviceOptions.map((opt) => (
                   <option key={opt} value={opt}>{opt === 'Semua' ? 'Semua Layanan' : opt}</option>
                 ))}
@@ -275,13 +310,15 @@ export const FinancePage = () => {
                 <th className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">Sudah Dibayar</th>
                 <th className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">Sisa Tagihan</th>
                 <th className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">Status</th>
-                <th className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-on-surface-variant text-center">Aksi</th>
+                {isOwner && (
+                  <th className="px-5 py-4 text-[10px] font-black uppercase tracking-wider text-on-surface-variant text-center">Aksi</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F1F5F9]">
               {filteredCases.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-16 text-center text-on-surface-variant text-[13px]">
+                  <td colSpan={isOwner ? 8 : 7} className="px-5 py-16 text-center text-on-surface-variant text-[13px]">
                     <span className="material-symbols-outlined text-[48px] block mb-2 opacity-30">credit_card_off</span>
                     Tidak ada data transaksi pengerjaan berkas.
                   </td>
@@ -310,15 +347,17 @@ export const FinancePage = () => {
                           {c.paymentStatus || 'Belum Lunas'}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-center">
-                        <button
-                          onClick={() => handleOpenEditModal(c)}
-                          className="px-3.5 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-black rounded-lg transition-all flex items-center gap-1 mx-auto"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">payments</span>
-                          <span>Update Bayar</span>
-                        </button>
-                      </td>
+                      {isOwner && (
+                        <td className="px-5 py-4 text-center">
+                          <button
+                            onClick={() => handleOpenEditModal(c)}
+                            className="px-3.5 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-black rounded-lg transition-all flex items-center gap-1 mx-auto"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">payments</span>
+                            <span>Update Bayar</span>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })

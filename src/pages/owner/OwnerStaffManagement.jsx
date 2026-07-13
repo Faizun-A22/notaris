@@ -10,7 +10,7 @@ export const OwnerStaffManagement = () => {
 
   // Add staff modal state
   const [name, setName] = useState('');
-  const [role, setRole] = useState('Staf Akta Utama');
+  const [role, setRole] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -36,31 +36,7 @@ export const OwnerStaffManagement = () => {
 
       if (profilesError) throw profilesError;
 
-      // Fetch all cases to calculate active cases count
-      const { data: casesData, error: casesError } = await supabase
-        .from('cases')
-        .select('assigned_staff_id, is_complete');
-
-      const activeCasesMap = {};
-      if (!casesError && casesData) {
-        casesData.forEach(c => {
-          if (!c.is_complete && c.assigned_staff_id) {
-            activeCasesMap[c.assigned_staff_id] = (activeCasesMap[c.assigned_staff_id] || 0) + 1;
-          }
-        });
-      }
-
-      if (profilesData) {
-        const formatted = profilesData.map(p => ({
-          id: p.id,
-          name: p.full_name,
-          role: p.title || 'Staf Administrasi',
-          email: p.email || 'staf@notaris.id',
-          avatar: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
-          activeCases: activeCasesMap[p.id] || 0
-        }));
-        setStaffList(formatted);
-      }
+      setStaffList(profilesData || []);
     } catch (err) {
       console.error('Error loading staff list:', err);
     } finally {
@@ -71,6 +47,21 @@ export const OwnerStaffManagement = () => {
   useEffect(() => {
     fetchStaff();
   }, []);
+
+  // Format and calculate active cases count reactively from context
+  const formattedStaffList = useMemo(() => {
+    return staffList.map(p => {
+      const activeCasesCount = cases.filter(c => c.assignedStaffId === p.id && !c.isComplete).length;
+      return {
+        id: p.id,
+        name: p.full_name,
+        role: p.title || 'Staf Administrasi',
+        email: p.email || 'staf@notaris.id',
+        avatar: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+        activeCases: activeCasesCount
+      };
+    });
+  }, [staffList, cases]);
 
   // Fetch activities for selected staff member
   useEffect(() => {
@@ -185,16 +176,36 @@ export const OwnerStaffManagement = () => {
         throw new Error('Supabase Admin client belum terkonfigurasi.');
       }
       
-      // Hapus dari Supabase Auth (secara otomatis menghapus baris profiles karena CASCADE)
+      // Coba hapus dari Supabase Auth
       const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
-      if (error) throw error;
+      
+      if (error) {
+        const isConstraintErr = 
+          error.message?.toLowerCase().includes('foreign key') || 
+          error.message?.toLowerCase().includes('violates') ||
+          error.message?.toLowerCase().includes('constraint');
 
-      toast.success('Staf berhasil dihapus secara permanen!');
+        if (isConstraintErr) {
+          // Fallback: Nonaktifkan staf di tabel profiles
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ is_active: false })
+            .eq('id', id);
+
+          if (updateError) throw updateError;
+          toast.success('Staf tidak dapat dihapus karena memiliki riwayat berkas/log, akun berhasil dinonaktifkan.');
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success('Staf berhasil dihapus secara permanen!');
+      }
+
       if (selectedStaff?.id === id) setSelectedStaff(null);
       fetchStaff();
     } catch (err) {
       console.error(err);
-      toast.error('Gagal menghapus staf: ' + err.message);
+      toast.error('Gagal memproses staf: ' + err.message);
     } finally {
       setDeletingId(null);
       setConfirmDeleteId(null);
@@ -226,14 +237,14 @@ export const OwnerStaffManagement = () => {
               <span className="material-symbols-outlined animate-spin text-primary text-[32px]">sync</span>
               <span className="ml-2 text-on-surface-variant font-medium">Memuat data staf...</span>
             </div>
-          ) : staffList.length === 0 ? (
+          ) : formattedStaffList.length === 0 ? (
             <div className="col-span-full text-center py-12 bg-surface-container-lowest border border-outline-variant rounded-xl p-8 card-shadow">
               <span className="material-symbols-outlined text-[48px] text-on-surface-variant mb-2">group_off</span>
               <p className="text-on-surface-variant font-bold">Belum ada staf terdaftar di database.</p>
               <p className="text-on-surface-variant text-[12px] mt-1">Tekan tombol 'Tambah Staf' untuk mendaftarkan staf baru.</p>
             </div>
           ) : (
-            staffList.map((st) => {
+            formattedStaffList.map((st) => {
               const isSelected = selectedStaff?.id === st.id;
               return (
                 <div 
@@ -449,17 +460,15 @@ export const OwnerStaffManagement = () => {
 
               <div>
                 <label className="block font-label-bold text-on-surface mb-1.5 text-[11px] font-bold">JABATAN / PERAN</label>
-                <select
+                <input
+                  type="text"
+                  required
                   disabled={submitting}
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-2.5 text-[13px] focus:ring-primary focus:border-primary"
-                >
-                  <option value="Staf Akta Utama">Staf Akta Utama</option>
-                  <option value="Staf Administrasi">Staf Administrasi</option>
-                  <option value="Notaris Rekanan">Notaris Rekanan</option>
-                  <option value="Magang">Magang</option>
-                </select>
+                  placeholder="Contoh: Staf Akta Utama, Staf Administrasi, dll."
+                />
               </div>
 
               <div>

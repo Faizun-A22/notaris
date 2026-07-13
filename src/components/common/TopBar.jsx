@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useRedAlert } from '../../hooks/useRedAlert';
 
-export const TopBar = ({ searchVal, onSearchChange, title, onMenuClick }) => {
+export const TopBar = ({ title, onMenuClick }) => {
   const { user, profile } = useAuth();
   const { hasAlerts, count, overdueCases } = useRedAlert();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -35,22 +35,8 @@ export const TopBar = ({ searchVal, onSearchChange, title, onMenuClick }) => {
         </h2>
       </div>
 
-      {/* Right side aligned elements (Search, Notifications, CTA Button) */}
+      {/* Right side aligned elements (Notifications, CTA Button) */}
       <div className="flex items-center gap-4 flex-1 justify-end">
-        
-        {/* Search Input */}
-        <div className="relative w-full max-w-[320px]">
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
-            search
-          </span>
-          <input
-            type="text"
-            value={searchVal || ''}
-            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-            className="w-full bg-[#F8F9FA] border border-[#E2E8F0] rounded-full h-11 pl-11 pr-5 text-[14px] text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-semibold"
-            placeholder="Cari file #, klien, atau tipe..."
-          />
-        </div>
 
         {/* Notifications Button */}
         <div className="relative">

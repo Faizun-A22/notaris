@@ -6,7 +6,6 @@ import { useAuth } from '../../hooks/useAuth';
 
 export const OwnerLayout = () => {
   const { user, profile, loading } = useAuth();
-  const [searchVal, setSearchVal] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Tampilkan loading spinner saat session sedang dicek
@@ -32,8 +31,6 @@ export const OwnerLayout = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
         <TopBar 
-          searchVal={searchVal} 
-          onSearchChange={setSearchVal}
           title="LexNotary Admin" 
           onMenuClick={() => setSidebarOpen(true)}
         />
@@ -41,7 +38,7 @@ export const OwnerLayout = () => {
         {/* Scrollable Content Shell */}
         <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
           <div className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 md:px-margin-page py-4 sm:py-6 md:py-stack-lg animate-fade-in">
-            <Outlet context={{ searchVal }} />
+            <Outlet />
           </div>
 
           {/* Consistent Footer */}

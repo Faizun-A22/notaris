@@ -5,6 +5,8 @@ import { StatusBadge } from '../../components/common/StatusBadge';
 import { formatDate } from '../../utils/formatDate';
 import { SERVICE_TYPES } from '../../constants/serviceTypes';
 
+import DateFilter from '../../components/common/DateFilter';
+
 export const StaffActivityPage = () => {
   const { user, profile } = useAuth();
   
@@ -18,6 +20,9 @@ export const StaffActivityPage = () => {
   const [filterCategory, setFilterCategory] = useState('Semua');
   const [filterService, setFilterService] = useState('Semua');
   const [filterType, setFilterType] = useState('Semua');
+  const [filterDate, setFilterDate] = useState('ALL');
+  const [filterMonth, setFilterMonth] = useState('ALL');
+  const [filterYear, setFilterYear] = useState('ALL');
 
   // Selected staff for Owner detail modal
   const [selectedStaff, setSelectedStaff] = useState(null);
@@ -85,13 +90,29 @@ export const StaffActivityPage = () => {
     }
   }, [user, profile]);
 
+  // Filter logs dynamically by selected period
+  const dateFilteredLogs = useMemo(() => {
+    return logs.filter((a) => {
+      if (!a.rawDate) return false;
+      const cDay = a.rawDate.getDate();
+      const cMonth = a.rawDate.getMonth() + 1;
+      const cYear = a.rawDate.getFullYear();
+
+      if (filterYear !== 'ALL' && cYear !== parseInt(filterYear, 10)) return false;
+      if (filterMonth !== 'ALL' && cMonth !== parseInt(filterMonth, 10)) return false;
+      if (filterDate !== 'ALL' && cDay !== parseInt(filterDate, 10)) return false;
+
+      return true;
+    });
+  }, [logs, filterDate, filterMonth, filterYear]);
+
   // Filter logs for logged in staff (self-only)
   const myLogs = useMemo(() => {
     if (profile?.role === 'staff') {
-      return logs.filter(l => l.user_id === user?.id);
+      return dateFilteredLogs.filter(l => l.user_id === user?.id);
     }
-    return logs;
-  }, [logs, user, profile]);
+    return dateFilteredLogs;
+  }, [dateFilteredLogs, user, profile]);
 
   // Apply filters to Staff view logs
   const filteredMyLogs = useMemo(() => {
@@ -113,7 +134,7 @@ export const StaffActivityPage = () => {
   const staffCardsData = useMemo(() => {
     if (profile?.role !== 'owner') return [];
     return staffList.map(st => {
-      const staffLogs = logs.filter(l => l.user_id === st.id);
+      const staffLogs = dateFilteredLogs.filter(l => l.user_id === st.id);
       const lastActiveLog = staffLogs[0] || null;
 
       return {
@@ -128,7 +149,7 @@ export const StaffActivityPage = () => {
         logs: staffLogs
       };
     });
-  }, [staffList, logs, profile]);
+  }, [staffList, dateFilteredLogs, profile]);
 
   // Calculate statistics for staff view
   const myStats = useMemo(() => {
@@ -149,11 +170,19 @@ export const StaffActivityPage = () => {
   if (profile?.role === 'owner') {
     return (
       <div className="space-y-stack-lg text-left font-sans animate-fade-in">
-        <div className="flex justify-between items-end mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
           <div>
             <h2 className="font-headline-lg text-headline-lg text-on-surface font-extrabold text-[26px]">Aktivitas Kerja Staf</h2>
             <p className="text-body-lg text-on-surface-variant mt-1 text-[13px]">Pantau ringkasan dan riwayat seluruh aktivitas operasional staf secara real-time.</p>
           </div>
+          <DateFilter
+            date={filterDate}
+            month={filterMonth}
+            year={filterYear}
+            onDateChange={setFilterDate}
+            onMonthChange={setFilterMonth}
+            onYearChange={setFilterYear}
+          />
         </div>
 
         {loading ? (
@@ -276,11 +305,19 @@ export const StaffActivityPage = () => {
   // Render Staff View (Table & Timeline for self-only)
   return (
     <div className="space-y-stack-lg text-left font-sans animate-fade-in">
-      <div className="flex justify-between items-end mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
         <div>
           <h2 className="font-headline-lg text-headline-lg text-on-surface font-extrabold text-[26px]">Aktivitas Kerja Saya</h2>
           <p className="text-body-lg text-on-surface-variant mt-1 text-[13px]">Tinjau seluruh riwayat pengerjaan dokumen yang Anda lakukan.</p>
         </div>
+        <DateFilter
+          date={filterDate}
+          month={filterMonth}
+          year={filterYear}
+          onDateChange={setFilterDate}
+          onMonthChange={setFilterMonth}
+          onYearChange={setFilterYear}
+        />
       </div>
 
       {/* Summary Cards */}
