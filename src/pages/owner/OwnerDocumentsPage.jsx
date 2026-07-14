@@ -7,8 +7,372 @@ import DateFilter from '../../components/common/DateFilter';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
+const getStagesForCase = (c) => {
+  if (!c) return [];
+  const isPPAT = c.category?.toLowerCase() === 'ppat' || ['AJB', 'HIBAH', 'APHB', 'APHT', 'WARIS', 'ROYA', 'PECAH', 'GANTI', 'KONVERSI', 'SKMHT', 'HT', 'HGB', 'HAK_PAKAI'].includes(c.serviceType);
+
+  if (c.serviceType === 'APHT') {
+    return [
+      { id: 1, label: 'Pengecekan kelengkapan Berkas' },
+      { id: 2, label: 'Pengecekan sertifikat' },
+      { id: 3, label: 'Pengetikan akta' },
+      { id: 4, label: 'Tanda tangan akta' },
+      { id: 5, label: 'Penomoran akta' },
+      { id: 6, label: 'Pendaftaran akta pada aplikasi mitra kerja atr bpn dan spa' },
+      { id: 7, label: 'Backup pada aplikasi bank' },
+      { id: 8, label: 'Verifikasi berkas oleh bpn melalui aplikasi mutra kerja atr bpn' },
+      { id: 9, label: 'Berkas dikembalikan atau telah diverifikasi oleh bpn' },
+      { id: 10, label: 'Pembayaran sps' },
+      { id: 11, label: 'Verifikasi oleh bpn pada aplikasi bank' },
+      { id: 12, label: 'Penerbitan sht' },
+      { id: 13, label: 'Penyerahan berkas kepada pihak bank' }
+    ];
+  }
+
+  if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB' || isPPAT) {
+    if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
+      return [
+        { id: 1, label: 'Pengecekan berkas' },
+        { id: 2, label: 'Proses validasi sertifikat' },
+        { id: 3, label: 'Proses pengecekan sertifikat' },
+        { id: 4, label: 'Pembayaran pajak peralihan' },
+        { id: 5, label: 'Validasi pajak peralihan' },
+        { id: 6, label: 'Pendaftaran pada atr bpn' },
+        { id: 7, label: 'Pemeriksaaan berkas oleh bpn' },
+        { id: 8, label: 'Berkas dikembalikan atau telah sesuai' },
+        { id: 9, label: 'Cari buku tanah di warkah bpn' },
+        { id: 10, label: 'Pembayaran sps' },
+        { id: 11, label: 'Pemeriksaan draft sertifikat' },
+        { id: 12, label: 'Draft sertifikat' },
+        { id: 13, label: 'Penerbitan sertifikat' },
+        { id: 14, label: 'Loket penyerahan produk' },
+        { id: 15, label: 'Penyerahan kepada pemohon' }
+      ];
+    }
+    if (c.serviceType === 'PECAH') {
+      return [
+        { id: 1, label: 'Pengecekan berkas' },
+        { id: 2, label: 'Pengecekan ke bpn status tanah yang kan dipecah' },
+        { id: 3, label: 'Pendaftaran ukur pemechan' },
+        { id: 4, label: 'Pengajuan tapak kapling' },
+        { id: 5, label: 'Masuk berkas fisik ke bpn' },
+        { id: 6, label: 'Pemeriksaan berkas oleh bpn' },
+        { id: 7, label: 'Berkas dikembalikan atau telah sesuai' },
+        { id: 8, label: 'Pembayaran sps' },
+        { id: 9, label: 'Ruang pengukuran untuk gambar, pemetaan, cetak su' },
+        { id: 10, label: 'Cari buku tanah di warkah bpn' },
+        { id: 11, label: 'Pemeriksaan draft sertifikat' },
+        { id: 12, label: 'Draft sertifikat' },
+        { id: 13, label: 'Penerbitan sertifikat' },
+        { id: 14, label: 'Loket penyerahan produk' },
+        { id: 15, label: 'Penyerahan kepada pemohon' }
+      ];
+    }
+    if (c.serviceType === 'GANTI') {
+      return [
+        { id: 1, label: 'Pengecekan berkas' },
+        { id: 2, label: 'Pengecekan ke bpn status tanah yang akan diproses' },
+        { id: 3, label: 'Pendaftaran ukur' },
+        { id: 4, label: 'Masuk berkas fisik ke bpn' },
+        { id: 5, label: 'Pemeriksaan berkas oleh bpn' },
+        { id: 6, label: 'Berkas dikembalikan atau telah sesuai' },
+        { id: 7, label: 'Pembayaran sps' },
+        { id: 8, label: 'Ruang pengukuran untuk gambar, pemetaan, cetak su' },
+        { id: 9, label: 'Cari buku tanah di warkah bpn' },
+        { id: 10, label: 'Pemriksaaan draft sertifikat' },
+        { id: 11, label: 'Draft sertifikat' },
+        { id: 12, label: 'Penerbitan sertifikat' },
+        { id: 13, label: 'Loket penyerahan produk' },
+        { id: 14, label: 'Penyerahan kepada pemohon' }
+      ];
+    }
+    if (c.serviceType === 'KONVERSI') {
+      return [
+        { id: 1, label: 'Pengecekan berkas' },
+        { id: 2, label: 'Pengecekan ke bpn status tanah yang akan diproses' },
+        { id: 3, label: 'Pendaftaran ukur' },
+        { id: 4, label: 'Masuk berkas fisik ke bpn' },
+        { id: 5, label: 'Pemeriksaan berkas oleh bpn' },
+        { id: 6, label: 'Berkas dikembalikan atau telah sesuai' },
+        { id: 7, label: 'Pembayaran sps' },
+        { id: 8, label: 'Ruang pengukuran untuk gambar, pemetaan, cetak su' },
+        { id: 9, label: 'Panitia lapang oleh petugas bpn' },
+        { id: 10, label: 'pengumuman' },
+        { id: 11, label: 'Pemeriksaan draft sertifikat' },
+        { id: 12, label: 'Draft sertifikat' },
+        { id: 13, label: 'Penerbitan sertifikat' },
+        { id: 14, label: 'Loket penyerahan produk' },
+        { id: 15, label: 'Penyerahan kepada pemohon' }
+      ];
+    }
+
+    // Default PPAT stages (AJB/HIBAH/APHB/SKMHT/HT/HGB/HAK_PAKAI)
+    return [
+      { id: 1, label: 'Pengecekan Berkas' },
+      { id: 2, label: 'Validasi Sertifikat' },
+      { id: 3, label: 'Pengecekan Sertifikat' },
+      { id: 4, label: 'Pengetikan Akta' },
+      { id: 5, label: 'Tanda Tangan Akta' },
+      { id: 6, label: 'Pembayaran Pajak Peralihan' },
+      { id: 7, label: 'Validasi Pajak Peralihan (PPH Final)' },
+      { id: 8, label: 'Penomoran Akta' },
+      { id: 9, label: 'Pendaftaran Akta' },
+      { id: 10, label: 'Masuk Berkas Fisik ke BPN' },
+      { id: 11, label: 'Pemeriksaan Berkas oleh BPN' },
+      { id: 12, label: 'Pencarian Buku Tanah' },
+      { id: 13, label: 'Pembayaran SPS' },
+      { id: 14, label: 'Pemeriksaan Draft Sertifikat' },
+      { id: 15, label: 'Draft Sertifikat' },
+      { id: 16, label: 'Penerbitan Sertifikat' },
+      { id: 17, label: 'Loket Penyerahan Produk' },
+      { id: 18, label: 'Penyerahan kepada Pemohon' }
+    ];
+  }
+
+  if (c.serviceType === 'FIDUSIA') {
+    return [
+      { id: 1, label: 'PENGECEKKAN KELENGKAPAN BERKAS' },
+      { id: 2, label: 'PENGETIKKAN AKTA' },
+      { id: 3, label: 'TANDA TANGAN AKTA' },
+      { id: 4, label: 'PENOMORAN AKTA' },
+      { id: 5, label: 'PENDAFTARAN KE KEMENKUMHAM' },
+      { id: 6, label: 'PENERBITAN SK KEMENKUMHAM' },
+      { id: 7, label: 'PENYERAHAN AKTA KE PIHAK BANK' }
+    ];
+  }
+
+  if (c.serviceType === 'APJB' || c.serviceType === 'SKUM') {
+    return [
+      { id: 1, label: 'PENGECEKKAN KELENGKAPAN BERKAS' },
+      { id: 2, label: 'PENGECEKKAN SERTIFIKAT' },
+      { id: 3, label: 'PENGETIKKAN AKTA' },
+      { id: 4, label: 'TANDA TANGAN AKTA' },
+      { id: 5, label: 'PEMBAYARAN PAJAK PERALIHAN' },
+      { id: 6, label: 'PENOMORAN AKTA' },
+      { id: 7, label: 'PENYERAHAN AKTA KE PEMOHON' }
+    ];
+  }
+
+  if (c.serviceType === 'SEWA' || c.serviceType === 'CONSEN') {
+    return [
+      { id: 1, label: 'PENGECEKKAN KELENGKAPAN BERKAS' },
+      { id: 2, label: 'PENGETIKKAN AKTA' },
+      { id: 3, label: 'TANDA TANGAN AKTA' },
+      { id: 4, label: 'PENOMORAN AKTA' },
+      { id: 5, label: 'PENYERAHAN AKTA KE PEMOHON' }
+    ];
+  }
+
+  if (c.serviceType === 'APPJB') {
+    return [
+      { id: 1, label: 'PENGECEKKAN KELENGKAPAN BERKAS' },
+      { id: 2, label: 'PENGECEKKAN SERTIFIKAT' },
+      { id: 3, label: 'PENGETIKKAN AKTA' },
+      { id: 4, label: 'TANDA TANGAN AKTA' },
+      { id: 5, label: 'PENOMORAN AKTA' }
+    ];
+  }
+
+  if (c.serviceType === 'APK') {
+    return [
+      { id: 1, label: 'PENGECEKKAN KELENGKAPAN BERKAS' },
+      { id: 2, label: 'PENGECEKKAN SERTIFIKAT' },
+      { id: 3, label: 'PENGETIKKAN AKTA' },
+      { id: 4, label: 'TANDA TANGAN AKTA' },
+      { id: 5, label: 'PENOMORAN AKTA' },
+      { id: 6, label: 'PENYERAHAN AKTA KE PIHAK BANK' }
+    ];
+  }
+
+  if (c.serviceType === 'YAYASAN') {
+    return [
+      { id: 1, label: 'PENGECEKKAN KELENGKAPAN BERKAS' },
+      { id: 2, label: 'DAFTAR NAMA YAYASAN PADA AHU' },
+      { id: 3, label: 'PENGETIKKAN AKTA' },
+      { id: 4, label: 'TANDA TANGAN AKTA' },
+      { id: 5, label: 'PENOMORAN AKTA' },
+      { id: 6, label: 'PENDAFTARAN KE KEMENKUMHAM' },
+      { id: 7, label: 'PENERBITAN SK KEMENKUMHAM' },
+      { id: 8, label: 'PENYERAHAN AKTA KE PEMOHON' }
+    ];
+  }
+
+  if (c.serviceType === 'PT') {
+    return [
+      { id: 1, label: 'PENGECEKKAN KELENGKAPAN BERKAS' },
+      { id: 2, label: 'DAFTAR NAMA PT PADA AHU' },
+      { id: 3, label: 'PENGETIKKAN AKTA' },
+      { id: 4, label: 'TANDA TANGAN AKTA' },
+      { id: 5, label: 'PENOMORAN AKTA' },
+      { id: 6, label: 'PENDAFTARAN KE KEMENKUMHAM' },
+      { id: 7, label: 'PENERBITAN SK KEMENKUMHAM' },
+      { id: 8, label: 'PENYERAHAN AKTA KE PEMOHON' }
+    ];
+  }
+
+  if (c.serviceType === 'CV') {
+    return [
+      { id: 1, label: 'PENGECEKKAN KELENGKAPAN BERKAS' },
+      { id: 2, label: 'DAFTAR NAMA CV PADA AHU' },
+      { id: 3, label: 'PENGETIKKAN AKTA' },
+      { id: 4, label: 'TANDA TANGAN AKTA' },
+      { id: 5, label: 'PENOMORAN AKTA' },
+      { id: 6, label: 'PENDAFTARAN KE KEMENKUMHAM' },
+      { id: 7, label: 'PENERBITAN SKT KEMENKUMHAM' },
+      { id: 8, label: 'PENYERAHAN AKTA KE PEMOHON' }
+    ];
+  }
+
+  return [
+    { id: 1, label: 'Pengecekkan Berkas' },
+    { id: 2, label: 'Pengecekkan Sertifikat' },
+    { id: 3, label: 'Pengetikkan Akta' },
+    { id: 4, label: 'Tanda Tangan Akta' },
+    { id: 5, label: 'Penomoran Akta' },
+    { id: 6, label: 'Penyelesaian Berkas' }
+  ];
+};
+
+const getActiveStageId = (c, stagesList) => {
+  if (!c) return 1;
+  if (c.status === 'Selesai') {
+    return stagesList.length + 1;
+  }
+  if (c.currentStageId !== undefined && c.currentStageId !== null && c.currentStageId !== 0) {
+    return c.currentStageId;
+  }
+
+  // Fallbacks
+  if (c.serviceType === 'AJB' || c.serviceType === 'HIBAH' || c.serviceType === 'APHB') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 4,
+      'Tanda Tangan Akta': 5,
+      'Validasi Pajak': 6,
+      'Proses BPN': 8
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'APHT') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 3,
+      'Tanda Tangan Akta': 4,
+      'Proses BPN': 6
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'WARIS' || c.serviceType === 'ROYA') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Validasi Pajak': 4,
+      'Proses BPN': 6
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'PECAH') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 4,
+      'Validasi Pajak': 5,
+      'Proses BPN': 5
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'GANTI') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 4,
+      'Tanda Tangan Akta': 4,
+      'Validasi Pajak': 4,
+      'Proses BPN': 4
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'KONVERSI') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 4,
+      'Tanda Tangan Akta': 4,
+      'Validasi Pajak': 4,
+      'Proses BPN': 4
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'FIDUSIA') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 1,
+      'Penyusunan Draf': 2,
+      'Tanda Tangan Akta': 3,
+      'Validasi Pajak': 5,
+      'Proses BPN': 5
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'APJB' || c.serviceType === 'SKUM') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 3,
+      'Tanda Tangan Akta': 4,
+      'Validasi Pajak': 5,
+      'Proses BPN': 6
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'SEWA' || c.serviceType === 'CONSEN') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 1,
+      'Penyusunan Draf': 2,
+      'Tanda Tangan Akta': 3,
+      'Validasi Pajak': 3,
+      'Proses BPN': 4
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'APPJB') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 3,
+      'Tanda Tangan Akta': 4,
+      'Validasi Pajak': 4,
+      'Proses BPN': 5
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'APK') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 3,
+      'Tanda Tangan Akta': 4,
+      'Validasi Pajak': 4,
+      'Proses BPN': 5
+    };
+    return statusMap[c.status] || 1;
+  } else if (c.serviceType === 'YAYASAN' || c.serviceType === 'PT' || c.serviceType === 'CV') {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 3,
+      'Tanda Tangan Akta': 4,
+      'Validasi Pajak': 5,
+      'Proses BPN': 6
+    };
+    return statusMap[c.status] || 1;
+  } else {
+    const statusMap = {
+      'Pemeriksaan Dokumen': 1,
+      'Verifikasi Sertifikat': 2,
+      'Penyusunan Draf': 3,
+      'Tanda Tangan Akta': 4,
+      'Proses BPN': 5
+    };
+    return statusMap[c.status] || 1;
+  }
+};
+
 export const OwnerDocumentsPage = () => {
-  const { cases, updateCaseStatus, toggleDocStatus, deleteCase, updateCase } = useCases();
+  const { cases, deleteCase, updateCase } = useCases();
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('Semua');
   const [filterService, setFilterService] = useState('Semua');
@@ -75,15 +439,7 @@ export const OwnerDocumentsPage = () => {
     if (selectedCase?.id === id) setSelectedCase(null);
   };
 
-  const STATUSES = [
-    'Pemeriksaan Dokumen',
-    'Verifikasi Sertifikat',
-    'Penyusunan Draf',
-    'Tanda Tangan Akta',
-    'Validasi Pajak',
-    'Proses BPN',
-    'Selesai'
-  ];
+  // Read-only dynamic timeline for Owner, matching the Staff's workflow stages
 
   return (
     <div className="space-y-stack-lg text-left">
@@ -305,45 +661,30 @@ export const OwnerDocumentsPage = () => {
 
             {/* Progress Timeline */}
             <div>
-              <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mb-3">Progress Pengerjaan</p>
-              <div className="space-y-2">
-                {STATUSES.map((s, i) => {
-                  const currentIdx = STATUSES.indexOf(selectedCase.status);
-                  const isPassed = i < currentIdx;
-                  const isCurrent = i === currentIdx;
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Progress Pengerjaan</p>
+                <span className="text-[11px] text-on-surface-variant/80 font-semibold bg-surface-container-low px-2 py-0.5 rounded-full border border-outline-variant">
+                  Total {getStagesForCase(selectedCase).length} Tahapan
+                </span>
+              </div>
+              <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
+                {getStagesForCase(selectedCase).map((st) => {
+                  const stagesList = getStagesForCase(selectedCase);
+                  const activeStageId = getActiveStageId(selectedCase, stagesList);
+                  const isPassed = st.id < activeStageId;
+                  const isCurrent = st.id === activeStageId;
                   return (
-                    <div key={s} className={`flex items-center gap-3 py-1.5 px-3 rounded-lg ${isCurrent ? 'bg-primary/10' : ''}`}>
+                    <div key={st.id} className={`flex items-center gap-3 py-1.5 px-3 rounded-lg ${isCurrent ? 'bg-primary/10' : ''}`}>
                       <span className={`material-symbols-outlined text-[18px] ${isPassed ? 'text-secondary' : isCurrent ? 'text-primary' : 'text-outline-variant'}`}>
                         {isPassed ? 'check_circle' : isCurrent ? 'radio_button_checked' : 'radio_button_unchecked'}
                       </span>
-                      <span className={`text-[12px] font-semibold ${isPassed ? 'text-secondary' : isCurrent ? 'text-primary font-bold' : 'text-on-surface-variant opacity-60'}`}>{s}</span>
+                      <span className={`text-[12px] font-semibold ${isPassed ? 'text-secondary' : isCurrent ? 'text-primary font-bold' : 'text-on-surface-variant opacity-60'}`}>
+                        {st.id}. {st.label.replace(/^\d+\.\s*/, '')}
+                      </span>
                     </div>
                   );
                 })}
               </div>
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-2 pt-2 border-t border-outline-variant">
-              <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Ubah Status</p>
-              <div className="flex flex-wrap gap-2">
-                {STATUSES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => { updateCaseStatus(selectedCase.id, s); setSelectedCase((prev) => ({ ...prev, status: s, isComplete: s === 'Selesai' })); }}
-                    className={`text-[11px] px-3 py-1.5 rounded-full font-bold transition-all border ${selectedCase.status === s ? 'bg-primary text-on-primary border-primary' : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high'}`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => { toggleDocStatus(selectedCase.id); setSelectedCase((prev) => ({ ...prev, documentsReady: !prev.documentsReady })); }}
-                className={`w-full mt-2 py-2 rounded-lg text-[12px] font-bold flex items-center justify-center gap-2 transition-all border ${selectedCase.documentsReady ? 'border-secondary text-secondary hover:bg-secondary/5' : 'border-primary text-primary hover:bg-primary/5'}`}
-              >
-                <span className="material-symbols-outlined text-[16px]">{selectedCase.documentsReady ? 'unpublished' : 'task_alt'}</span>
-                {selectedCase.documentsReady ? 'Tandai Dokumen Belum Lengkap' : 'Tandai Dokumen Lengkap'}
-              </button>
             </div>
           </div>
         )}

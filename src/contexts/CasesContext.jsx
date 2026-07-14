@@ -421,13 +421,32 @@ export const CasesProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchCasesFromSupabase();
-    } else {
+    if (!user) {
       const storedCases = localStorage.getItem('notary_cases');
       setCases(storedCases ? JSON.parse(storedCases) : []);
       setActivities([]);
+      return;
     }
+
+    fetchCasesFromSupabase();
+
+    // 1. Real-time subscription to sync changes from Supabase instantly
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cases' }, fetchCasesFromSupabase)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'checklist_items' }, fetchCasesFromSupabase)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_logs' }, fetchCasesFromSupabase)
+      .subscribe();
+
+    // 2. Polling interval (8 seconds) as a backup for reliable offline/online recovery
+    const interval = setInterval(() => {
+      fetchCasesFromSupabase();
+    }, 8000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, [user]);
 
   // A. Tambah Berkas Baru
