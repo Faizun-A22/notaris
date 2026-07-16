@@ -3,7 +3,7 @@ import { generateCaseNumber } from '../utils/generateCaseNumber';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
-export const getDefaultChecklist = (serviceType) => {
+const getRawDefaultChecklist = (serviceType) => {
   if (serviceType === 'SKMHT') {
     return [
       { id: 1, name: 'SERTIFIKAT ASLI', desc: 'Must be physical original document', status: 'Sudah Diterima' },
@@ -272,6 +272,16 @@ export const getDefaultChecklist = (serviceType) => {
     { id: 3, name: 'NPWP PEMOHON', desc: 'Nomor Pokok Wajib Pajak', status: 'Perlu Verifikasi' },
     { id: 4, name: 'DOKUMEN PENDUKUNG', desc: 'Dokumen pendukung lainnya', status: 'Belum Ada' },
   ];
+};
+
+export const getDefaultChecklist = (serviceType) => {
+  const list = getRawDefaultChecklist(serviceType);
+  return list.map(item => ({
+    ...item,
+    status: 'Belum Ada',
+    fileName: null,
+    fileUrl: null
+  }));
 };
 
 export const CasesContext = createContext(null);
