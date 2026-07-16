@@ -15,8 +15,38 @@ const formatNumberWithDots = (num) => {
 
 const parseDotsToNumber = (str) => {
   if (!str) return 0;
-  const clean = String(str).replace(/\D/g, '');
-  return Number(clean) || 0;
+  
+  let clean = String(str).toLowerCase().trim();
+  
+  let multiplier = 1;
+  if (clean.includes('jt') || clean.includes('juta')) {
+    multiplier = 1000000;
+    clean = clean.replace(/jt|juta/g, '').trim();
+  } else if (clean.includes('m') || clean.includes('miliar') || clean.includes('milyar')) {
+    multiplier = 1000000000;
+    clean = clean.replace(/miliar|milyar|m/g, '').trim();
+  } else if (clean.includes('rb') || clean.includes('ribu')) {
+    multiplier = 1000;
+    clean = clean.replace(/rb|ribu/g, '').trim();
+  }
+  
+  clean = clean.replace(/,/g, '.');
+  
+  const dotCount = (clean.match(/\./g) || []).length;
+  if (dotCount > 1) {
+    clean = clean.replace(/\./g, '');
+  } else if (dotCount === 1) {
+    const parts = clean.split('.');
+    if (multiplier === 1) {
+      if (parts[1].length === 3) {
+        clean = clean.replace(/\./g, '');
+      }
+    }
+  }
+  
+  clean = clean.replace(/[^0-9.]/g, '');
+  const parsed = parseFloat(clean) || 0;
+  return Math.round(parsed * multiplier);
 };
 
 export const FinancePage = () => {

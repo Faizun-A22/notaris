@@ -896,6 +896,10 @@ export const CasesProvider = ({ children }) => {
         dbUpdate.is_draft = updatedFields.isDraft;
         changes.push(updatedFields.isDraft ? `Berkas diubah menjadi draf` : `Berkas resmi diterbitkan dari draf`);
       }
+      if (updatedFields.documentsReady !== undefined && updatedFields.documentsReady !== c.documentsReady) {
+        dbUpdate.documents_ready = updatedFields.documentsReady;
+        changes.push(updatedFields.documentsReady ? 'Seluruh berkas persyaratan telah lengkap' : 'Berkas persyaratan ditandai belum lengkap');
+      }
 
       if (Object.keys(dbUpdate).length > 0) {
         const { error: updateError } = await supabase

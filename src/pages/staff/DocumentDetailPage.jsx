@@ -14,8 +14,38 @@ const formatNumberWithDots = (num) => {
 
 const parseDotsToNumber = (str) => {
   if (!str) return 0;
-  const clean = String(str).replace(/\D/g, '');
-  return Number(clean) || 0;
+  
+  let clean = String(str).toLowerCase().trim();
+  
+  let multiplier = 1;
+  if (clean.includes('jt') || clean.includes('juta')) {
+    multiplier = 1000000;
+    clean = clean.replace(/jt|juta/g, '').trim();
+  } else if (clean.includes('m') || clean.includes('miliar') || clean.includes('milyar')) {
+    multiplier = 1000000000;
+    clean = clean.replace(/miliar|milyar|m/g, '').trim();
+  } else if (clean.includes('rb') || clean.includes('ribu')) {
+    multiplier = 1000;
+    clean = clean.replace(/rb|ribu/g, '').trim();
+  }
+  
+  clean = clean.replace(/,/g, '.');
+  
+  const dotCount = (clean.match(/\./g) || []).length;
+  if (dotCount > 1) {
+    clean = clean.replace(/\./g, '');
+  } else if (dotCount === 1) {
+    const parts = clean.split('.');
+    if (multiplier === 1) {
+      if (parts[1].length === 3) {
+        clean = clean.replace(/\./g, '');
+      }
+    }
+  }
+  
+  clean = clean.replace(/[^0-9.]/g, '');
+  const parsed = parseFloat(clean) || 0;
+  return Math.round(parsed * multiplier);
 };
 
 const copyToClipboard = (text) => {
@@ -59,9 +89,16 @@ export const DocumentDetailPage = () => {
   // States for modals
   const [selectedDocForPreview, setSelectedDocForPreview] = useState(null);
   const [selectedDocForUpload, setSelectedDocForUpload] = useState(null);
+  const [uploadFile, setUploadFile] = useState(null);
   const [selectedDocForReview, setSelectedDocForReview] = useState(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!selectedDocForUpload) {
+      setUploadFile(null);
+    }
+  }, [selectedDocForUpload]);
   
   // Share link states
   const [showShareModal, setShowShareModal] = useState(false);
@@ -1772,48 +1809,72 @@ export const DocumentDetailPage = () => {
                  className="opacity-0 absolute pointer-events-none w-0 h-0"
                  onChange={(e) => {
                    const file = e.target.files[0];
-                   if (!file) return;
-                   const fileData = {
-                     name: file.name,
-                     url: URL.createObjectURL(file)
-                   };
-                   handleUpdateChecklistStatus(selectedDocForUpload.id, 'Perlu Verifikasi', fileData);
-                   setSelectedDocForUpload(null);
+                   if (file) {
+                     setUploadFile(file);
+                   }
                  }}
                />
 
-               <div
-                 onClick={() => document.getElementById(`modal-file-${selectedDocForUpload.id}`).click()}
-                 className="border-2 border-dashed border-primary/40 hover:border-primary rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer bg-primary/5 transition-all group hover:scale-[1.01]"
-               >
-                 <span className="material-symbols-outlined text-[48px] text-primary mb-3 group-hover:scale-110 transition-transform">
-                   cloud_upload
-                 </span>
-                 <h4 className="text-[13px] font-bold text-on-surface">
-                   Tarik berkas ke sini atau <span className="text-primary underline">klik untuk mencari</span>
-                 </h4>
-                 <p className="text-[10px] text-on-surface-variant mt-2 max-w-xs leading-normal">
-                   Mendukung format PDF, JPG, atau PNG dengan ukuran maksimal 10MB.
-                 </p>
-               </div>
+               {uploadFile ? (
+                 <div className="border border-primary bg-primary/5 rounded-xl p-6 flex flex-col items-center justify-center text-center relative">
+                   <button
+                     onClick={() => setUploadFile(null)}
+                     className="absolute top-3 right-3 text-on-surface-variant hover:text-error transition-colors p-1"
+                     title="Hapus file"
+                   >
+                     <span className="material-symbols-outlined text-[20px]">delete</span>
+                   </button>
+                   <span className="material-symbols-outlined text-[48px] text-primary mb-2">
+                     {['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(uploadFile.name.toLowerCase().split('.').pop()) ? 'image' : 'picture_as_pdf'}
+                   </span>
+                   <p className="text-[13px] font-bold text-on-surface truncate w-full max-w-[260px]">{uploadFile.name}</p>
+                   <p className="text-[10px] text-on-surface-variant mt-1">{(uploadFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                 </div>
+               ) : (
+                 <div
+                   onClick={() => document.getElementById(`modal-file-${selectedDocForUpload.id}`).click()}
+                   className="border-2 border-dashed border-primary/40 hover:border-primary rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer bg-primary/5 transition-all group hover:scale-[1.01]"
+                 >
+                   <span className="material-symbols-outlined text-[48px] text-primary mb-3 group-hover:scale-110 transition-transform">
+                     cloud_upload
+                   </span>
+                   <h4 className="text-[13px] font-bold text-on-surface">
+                     Tarik berkas ke sini atau <span className="text-primary underline">klik untuk mencari</span>
+                   </h4>
+                   <p className="text-[10px] text-on-surface-variant mt-2 max-w-xs leading-normal">
+                     Mendukung format PDF, JPG, atau PNG dengan ukuran maksimal 10MB.
+                   </p>
+                 </div>
+               )}
 
-              <div className="mt-6 flex gap-3">
-                <button
-                  onClick={() => setSelectedDocForUpload(null)}
-                  className="flex-1 py-2 border border-outline-variant rounded-lg text-[13px] font-bold hover:bg-surface-container-low transition-colors text-center"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={() => {
-                    handleUpdateChecklistStatus(selectedDocForUpload.id, 'Perlu Verifikasi');
-                    setSelectedDocForUpload(null);
-                  }}
-                  className="flex-1 py-2 bg-primary text-on-primary rounded-lg text-[13px] font-bold hover:opacity-90 transition-all text-center"
-                >
-                  Simulasi Upload
-                </button>
-              </div>
+               <div className="mt-6 flex gap-3">
+                 <button
+                   onClick={() => setSelectedDocForUpload(null)}
+                   className="flex-1 py-2 border border-outline-variant rounded-lg text-[13px] font-bold hover:bg-surface-container-low transition-colors text-center"
+                 >
+                   Batal
+                 </button>
+                 <button
+                   disabled={!uploadFile}
+                   onClick={() => {
+                     if (!uploadFile) return;
+                     const fileData = {
+                       name: uploadFile.name,
+                       url: URL.createObjectURL(uploadFile)
+                     };
+                     handleUpdateChecklistStatus(selectedDocForUpload.id, 'Perlu Verifikasi', fileData);
+                     setSelectedDocForUpload(null);
+                   }}
+                   className={`flex-1 py-2 rounded-lg text-[13px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
+                     uploadFile 
+                       ? 'bg-primary text-on-primary hover:opacity-90 cursor-pointer shadow-sm' 
+                       : 'bg-surface-container-high text-on-surface-variant/40 cursor-not-allowed'
+                   }`}
+                 >
+                   <span className="material-symbols-outlined text-[16px]">publish</span>
+                   Unggah Dokumen
+                 </button>
+               </div>
             </div>
           </div>
         )}
@@ -1865,8 +1926,8 @@ export const DocumentDetailPage = () => {
                   <div className="w-[300px] h-[200px] bg-white border border-outline-variant shadow rounded-lg p-4 flex flex-col justify-between text-on-surface relative overflow-hidden">
                     <div className="absolute inset-0 bg-amber-500/5 z-0 flex flex-col items-center justify-center p-4 text-center">
                       <span className="material-symbols-outlined text-amber-600 text-[32px] mb-1">pending_actions</span>
-                      <p className="text-[11px] font-bold text-amber-800">Menunggu Verifikasi (Simulasi)</p>
-                      <p className="text-[9px] text-on-surface-variant mt-1 leading-tight">Tidak ada file fisik yang diunggah. Gunakan tombol verifikasi di bawah untuk menyetujui dokumen ini.</p>
+                      <p className="text-[11px] font-bold text-amber-800">Menunggu Verifikasi Dokumen</p>
+                      <p className="text-[9px] text-on-surface-variant mt-1 leading-tight">Dokumen diunggah tanpa lampiran file fisik atau lampiran tidak tersedia. Gunakan tombol verifikasi di bawah untuk menyetujui dokumen ini.</p>
                     </div>
                     <div className="border-b pb-2 flex justify-between items-center opacity-20 select-none">
                       <div className="flex items-center gap-1 text-primary">
