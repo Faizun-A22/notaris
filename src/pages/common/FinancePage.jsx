@@ -57,14 +57,15 @@ const CurrencyInput = ({ id, value, onChange, className, placeholder, required =
   }, [value]);
 
   const handleChange = (e) => {
-    const val = e.target.value;
-    setTempValue(val);
-    const parsed = parseDotsToNumber(val);
-    onChange(parsed);
-  };
-
-  const handleBlur = () => {
-    setTempValue(formatNumberWithDots(value));
+    const rawVal = e.target.value.replace(/\D/g, '');
+    if (!rawVal) {
+      setTempValue('');
+      onChange(0);
+      return;
+    }
+    const numVal = parseInt(rawVal, 10);
+    setTempValue(numVal.toLocaleString('id-ID'));
+    onChange(numVal);
   };
 
   return (
@@ -74,7 +75,6 @@ const CurrencyInput = ({ id, value, onChange, className, placeholder, required =
       required={required}
       value={tempValue}
       onChange={handleChange}
-      onBlur={handleBlur}
       className={className}
       placeholder={placeholder}
     />
