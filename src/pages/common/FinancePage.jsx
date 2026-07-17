@@ -49,6 +49,38 @@ const parseDotsToNumber = (str) => {
   return Math.round(parsed * multiplier);
 };
 
+const CurrencyInput = ({ id, value, onChange, className, placeholder, required = false }) => {
+  const [tempValue, setTempValue] = useState(formatNumberWithDots(value));
+
+  useEffect(() => {
+    setTempValue(formatNumberWithDots(value));
+  }, [value]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setTempValue(val);
+    const parsed = parseDotsToNumber(val);
+    onChange(parsed);
+  };
+
+  const handleBlur = () => {
+    setTempValue(formatNumberWithDots(value));
+  };
+
+  return (
+    <input
+      id={id}
+      type="text"
+      required={required}
+      value={tempValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
+};
+
 export const FinancePage = () => {
   const { cases, updateCase } = useCases();
   const { profile } = useAuth();
@@ -447,11 +479,10 @@ export const FinancePage = () => {
                 </label>
                 <div className="relative flex items-center">
                   <span className="absolute left-3 text-[12.5px] font-bold text-on-surface-variant">Rp</span>
-                  <input
+                  <CurrencyInput
                     id="edit_fees"
-                    type="text"
-                    value={formatNumberWithDots(editFees)}
-                    onChange={(e) => handleFeesChange(parseDotsToNumber(e.target.value))}
+                    value={editFees}
+                    onChange={handleFeesChange}
                     className="w-full pl-9 pr-3 py-2 bg-[#F8F9FA] border border-outline-variant rounded-lg text-[12.5px] text-on-surface font-bold focus:outline-none"
                     placeholder="0"
                   />
@@ -465,11 +496,10 @@ export const FinancePage = () => {
                 </label>
                 <div className="relative flex items-center">
                   <span className="absolute left-3 text-[12.5px] font-bold text-on-surface-variant">Rp</span>
-                  <input
+                  <CurrencyInput
                     id="edit_paid"
-                    type="text"
-                    value={formatNumberWithDots(editPaidAmount)}
-                    onChange={(e) => handlePaidAmountChange(parseDotsToNumber(e.target.value))}
+                    value={editPaidAmount}
+                    onChange={handlePaidAmountChange}
                     className="w-full pl-9 pr-3 py-2 bg-[#F8F9FA] border border-outline-variant rounded-lg text-[12.5px] text-on-surface font-bold focus:outline-none"
                     placeholder="0"
                   />

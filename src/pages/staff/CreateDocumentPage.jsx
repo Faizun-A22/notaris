@@ -47,6 +47,38 @@ const parseDotsToNumber = (str) => {
   return Math.round(parsed * multiplier);
 };
 
+const CurrencyInput = ({ id, value, onChange, className, placeholder, required = false }) => {
+  const [tempValue, setTempValue] = useState(formatNumberWithDots(value));
+
+  useEffect(() => {
+    setTempValue(formatNumberWithDots(value));
+  }, [value]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setTempValue(val);
+    const parsed = parseDotsToNumber(val);
+    onChange(parsed);
+  };
+
+  const handleBlur = () => {
+    setTempValue(formatNumberWithDots(value));
+  };
+
+  return (
+    <input
+      id={id}
+      type="text"
+      required={required}
+      value={tempValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
+};
+
 export const CreateDocumentPage = () => {
   const { addCase } = useCases();
   const navigate = useNavigate();
@@ -728,12 +760,11 @@ export const CreateDocumentPage = () => {
                 </label>
                 <div className="relative flex items-center">
                   <span className="absolute left-3.5 font-bold text-[13px] text-on-surface-variant">Rp</span>
-                  <input
+                  <CurrencyInput
                     id="transaction_value"
-                    type="text"
                     required
-                    value={formatNumberWithDots(transactionValue)}
-                    onChange={(e) => setTransactionValue(parseDotsToNumber(e.target.value))}
+                    value={transactionValue}
+                    onChange={setTransactionValue}
                     placeholder="Contoh: 150.000.000"
                     className="w-full pl-11 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface placeholder:text-outline transition-all focus:outline-none focus:border-primary focus:border-2"
                   />
@@ -980,12 +1011,11 @@ export const CreateDocumentPage = () => {
                   </label>
                   <div className="relative flex items-center">
                     <span className="absolute left-3.5 text-on-surface-variant text-[13px] font-bold">Rp</span>
-                    <input
+                    <CurrencyInput
                       id="fees"
-                      type="text"
                       required
-                      value={formatNumberWithDots(fees)}
-                      onChange={(e) => handleFeesChange(parseDotsToNumber(e.target.value))}
+                      value={fees}
+                      onChange={handleFeesChange}
                       className="w-full pl-10 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface font-semibold focus:outline-none focus:border-primary focus:border-2"
                       placeholder="0"
                     />
@@ -999,11 +1029,10 @@ export const CreateDocumentPage = () => {
                   </label>
                   <div className="relative flex items-center">
                     <span className="absolute left-3.5 text-on-surface-variant text-[13px] font-bold">Rp</span>
-                    <input
+                    <CurrencyInput
                       id="paid_amount"
-                      type="text"
-                      value={formatNumberWithDots(paidAmount)}
-                      onChange={(e) => handlePaidAmountChange(parseDotsToNumber(e.target.value))}
+                      value={paidAmount}
+                      onChange={handlePaidAmountChange}
                       className="w-full pl-10 pr-4 py-3 bg-white border border-outline-variant rounded-xl text-body-md text-on-surface font-semibold focus:outline-none focus:border-primary focus:border-2"
                       placeholder="0"
                     />

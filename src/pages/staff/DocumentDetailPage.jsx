@@ -48,6 +48,38 @@ const parseDotsToNumber = (str) => {
   return Math.round(parsed * multiplier);
 };
 
+const CurrencyInput = ({ id, value, onChange, className, placeholder, required = false }) => {
+  const [tempValue, setTempValue] = useState(formatNumberWithDots(value));
+
+  useEffect(() => {
+    setTempValue(formatNumberWithDots(value));
+  }, [value]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setTempValue(val);
+    const parsed = parseDotsToNumber(val);
+    onChange(parsed);
+  };
+
+  const handleBlur = () => {
+    setTempValue(formatNumberWithDots(value));
+  };
+
+  return (
+    <input
+      id={id}
+      type="text"
+      required={required}
+      value={tempValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
+};
+
 const copyToClipboard = (text) => {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     return navigator.clipboard.writeText(text);
@@ -2160,11 +2192,9 @@ export const DocumentDetailPage = () => {
                   <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
                     Biaya Akta (Rupiah)
                   </label>
-                  <input
-                    type="text"
-                    value={formatNumberWithDots(editFees)}
-                    onChange={(e) => {
-                      const val = parseDotsToNumber(e.target.value);
+                  <CurrencyInput
+                    value={editFees}
+                    onChange={(val) => {
                       setEditFees(val);
                       if (editPaidAmount >= val && val > 0) {
                         setEditPaymentStatus('Lunas');
@@ -2184,11 +2214,9 @@ export const DocumentDetailPage = () => {
                   <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
                     Nominal Dibayar (Rupiah)
                   </label>
-                  <input
-                    type="text"
-                    value={formatNumberWithDots(editPaidAmount)}
-                    onChange={(e) => {
-                      const val = parseDotsToNumber(e.target.value);
+                  <CurrencyInput
+                    value={editPaidAmount}
+                    onChange={(val) => {
                       setEditPaidAmount(val);
                       if (val >= editFees && editFees > 0) {
                         setEditPaymentStatus('Lunas');
