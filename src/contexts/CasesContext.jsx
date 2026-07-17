@@ -8,77 +8,77 @@ const getRawDefaultChecklist = (serviceType) => {
     return [
       { id: 1, name: 'SERTIFIKAT ASLI', desc: 'Must be physical original document', status: 'Sudah Diterima' },
       { id: 2, name: 'KTP AN. PEMEGANG HAK', desc: 'Valid E-KTP photocopy or scan', status: 'Sudah Diterima' },
-      { id: 3, name: 'KTP PERSETUJUAN PEMEGANG HAK', desc: 'Required for married individuals', status: 'Belum Diunggah' },
+      { id: 3, name: 'KTP PERSETUJUAN PEMEGANG HAK', desc: 'Required for married individuals', status: 'Belum Ada' },
       { id: 4, name: 'FOTOKOPI KARTU KELUARGA', desc: 'Family Registry card', status: 'Sudah Diterima' },
       { id: 5, name: 'FOTOKOPI SURAT NIKAH', desc: 'Marriage certificate', status: 'Perlu Verifikasi' },
       { id: 6, name: 'FOTOKOPI PBB TAHUN BERJALAN', desc: 'Latest property tax receipt', status: 'Sudah Diterima' },
       { id: 7, name: 'FOTOKOPI PERJANJIAN KREDIT', desc: 'Credit agreement from bank', status: 'Sudah Diterima' },
-      { id: 8, name: 'FOTOKOPI KTP PIHAK BANK', desc: 'Bank officer representative ID', status: 'Belum Diunggah' },
-      { id: 9, name: 'FOTOKOPI SK PIHAK BANK', desc: 'Officer\'s letter of appointment', status: 'Belum Diunggah' },
+      { id: 8, name: 'FOTOKOPI KTP PIHAK BANK', desc: 'Bank officer representative ID', status: 'Belum Ada' },
+      { id: 9, name: 'FOTOKOPI SK PIHAK BANK', desc: 'Officer\'s letter of appointment', status: 'Belum Ada' },
     ];
   }
   if (serviceType === 'AJB') {
     return [
       { id: 1, name: 'Sertifikat Asli', desc: 'Sertifikat asli (HM/HGB/HP) dari BPN', status: 'Sudah Diterima' },
       { id: 2, name: 'Fotokopi KTP Pemegang Hak', desc: 'Valid E-KTP photocopy or scan of seller', status: 'Sudah Diterima' },
-      { id: 3, name: 'Fotokopi KTP Persetujuan Pemegang Hak', desc: 'Required for married individuals', status: 'Belum Diunggah' },
+      { id: 3, name: 'Fotokopi KTP Persetujuan Pemegang Hak', desc: 'Required for married individuals', status: 'Belum Ada' },
       { id: 4, name: 'Fotokopi Surat Nikah Pemegang Hak', desc: 'Marriage certificate of seller', status: 'Sudah Diterima' },
       { id: 5, name: 'Fotokopi KK Pemegang Hak', desc: 'Family Registry card of seller', status: 'Sudah Diterima' },
       { id: 6, name: 'Fotokopi KTP Pembeli', desc: 'Valid E-KTP photocopy or scan of buyer', status: 'Perlu Verifikasi' },
       { id: 7, name: 'Fotokopi KK Pembeli', desc: 'Family Registry card of buyer', status: 'Sudah Diterima' },
       { id: 8, name: 'Nomor Telepon dan Email Pembeli', desc: 'Contact details of buyer', status: 'Sudah Diterima' },
-      { id: 9, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Latest property tax receipt', status: 'Belum Diunggah' },
+      { id: 9, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Latest property tax receipt', status: 'Belum Ada' },
       { id: 10, name: 'Share Lokasi Tanah', desc: 'Location coordinates or map link', status: 'Sudah Diterima' },
-      { id: 11, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Physical photo with coordinate stamp', status: 'Belum Diunggah' },
+      { id: 11, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Physical photo with coordinate stamp', status: 'Belum Ada' },
     ];
   }
   if (serviceType === 'HIBAH') {
     return [
       { id: 1, name: 'Sertifikat Asli', desc: 'Sertifikat asli tanah/bangunan', status: 'Sudah Diterima' },
       { id: 2, name: 'Fotokopi KTP Pemegang Hak', desc: 'Fotokopi KTP pemberi hibah', status: 'Sudah Diterima' },
-      { id: 3, name: 'Fotokopi KTP Persetujuan Istri Pemegang Hak', desc: 'Persetujuan istri pemberi hibah', status: 'Belum Diunggah' },
+      { id: 3, name: 'Fotokopi KTP Persetujuan Istri Pemegang Hak', desc: 'Persetujuan istri pemberi hibah', status: 'Belum Ada' },
       { id: 4, name: 'Fotokopi Surat Nikah Pemegang Hak', desc: 'Surat nikah pemberi hibah', status: 'Sudah Diterima' },
       { id: 5, name: 'Fotokopi KK Pemegang Hak', desc: 'Kartu Keluarga pemberi hibah', status: 'Sudah Diterima' },
-      { id: 6, name: 'Fotokopi KTP Persetujuan Seluruh Anak', desc: 'Fotokopi KTP persetujuan seluruh anak kandung', status: 'Belum Diunggah' },
-      { id: 7, name: 'Fotokopi KK Persetujuan Seluruh Anak', desc: 'Kartu Keluarga persetujuan anak', status: 'Belum Diunggah' },
-      { id: 8, name: 'Fotokopi Akta Kelahiran Seluruh Anak', desc: 'Akta kelahiran anak kandung', status: 'Belum Diunggah' },
-      { id: 9, name: 'Surat Keterangan Anak dari Desa', desc: 'Surat keterangan anak/silsilah waris', status: 'Belum Diunggah' },
-      { id: 10, name: 'Fotokopi KTP Penerima Hibah', desc: 'Fotokopi KTP penerima hibah', status: 'Belum Diunggah' },
-      { id: 11, name: 'Fotokopi KK Penerima Hibah', desc: 'Kartu Keluarga penerima hibah', status: 'Belum Diunggah' },
-      { id: 12, name: 'Fotokopi Akta Kelahiran Penerima Hibah', desc: 'Akta kelahiran penerima hibah', status: 'Belum Diunggah' },
+      { id: 6, name: 'Fotokopi KTP Persetujuan Seluruh Anak', desc: 'Fotokopi KTP persetujuan seluruh anak kandung', status: 'Belum Ada' },
+      { id: 7, name: 'Fotokopi KK Persetujuan Seluruh Anak', desc: 'Kartu Keluarga persetujuan anak', status: 'Belum Ada' },
+      { id: 8, name: 'Fotokopi Akta Kelahiran Seluruh Anak', desc: 'Akta kelahiran anak kandung', status: 'Belum Ada' },
+      { id: 9, name: 'Surat Keterangan Anak dari Desa', desc: 'Surat keterangan anak/silsilah waris', status: 'Belum Ada' },
+      { id: 10, name: 'Fotokopi KTP Penerima Hibah', desc: 'Fotokopi KTP penerima hibah', status: 'Belum Ada' },
+      { id: 11, name: 'Fotokopi KK Penerima Hibah', desc: 'Kartu Keluarga penerima hibah', status: 'Belum Ada' },
+      { id: 12, name: 'Fotokopi Akta Kelahiran Penerima Hibah', desc: 'Akta kelahiran penerima hibah', status: 'Belum Ada' },
       { id: 13, name: 'Nomor Telepon dan Email Penerima Hibah', desc: 'Kontak penerima hibah', status: 'Sudah Diterima' },
-      { id: 14, name: 'Fotokopi PBB Tahun Berjalan', desc: 'PBB tahun berjalan pemberi hibah', status: 'Belum Diunggah' },
+      { id: 14, name: 'Fotokopi PBB Tahun Berjalan', desc: 'PBB tahun berjalan pemberi hibah', status: 'Belum Ada' },
       { id: 15, name: 'Share Lokasi Tanah', desc: 'Share lokasi tanah/objek hibah', status: 'Sudah Diterima' },
-      { id: 16, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto objek hibah dari kamera GPS', status: 'Belum Diunggah' }
+      { id: 16, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto objek hibah dari kamera GPS', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'APHB') {
     return [
       { id: 1, name: 'Sertifikat Asli', desc: 'Sertifikat tanah asli HM/HGB/HP', status: 'Sudah Diterima' },
       { id: 2, name: 'Surat Keterangan Ahli Waris Asli', desc: 'Surat keterangan ahli waris asli', status: 'Sudah Diterima' },
-      { id: 3, name: 'Fotokopi Legalisir Kepala Desa untuk surat keterangan ahli waris', desc: 'Fotokopi legalisir Kades untuk surat keterangan ahli waris', status: 'Belum Diunggah' },
+      { id: 3, name: 'Fotokopi Legalisir Kepala Desa untuk surat keterangan ahli waris', desc: 'Fotokopi legalisir Kades untuk surat keterangan ahli waris', status: 'Belum Ada' },
       { id: 4, name: 'Fotokopi Surat/Akta Kematian', desc: 'Fotokopi surat/akta kematian pewaris', status: 'Sudah Diterima' },
       { id: 5, name: 'Surat Nikah atau Surat Keterangan Nikah dari desa (alm)', desc: 'Surat nikah alm atau surat keterangan nikah desa', status: 'Sudah Diterima' },
-      { id: 6, name: 'Surat Keterangan Anak dari Desa', desc: 'Surat keterangan anak/silsilah waris', status: 'Belum Diunggah' },
-      { id: 7, name: 'Fotokopi KTP Seluruh Ahli Waris', desc: 'KTP seluruh ahli waris', status: 'Belum Diunggah' },
-      { id: 8, name: 'Fotokopi KK Seluruh Ahli Waris', desc: 'KK seluruh ahli waris', status: 'Belum Diunggah' },
+      { id: 6, name: 'Surat Keterangan Anak dari Desa', desc: 'Surat keterangan anak/silsilah waris', status: 'Belum Ada' },
+      { id: 7, name: 'Fotokopi KTP Seluruh Ahli Waris', desc: 'KTP seluruh ahli waris', status: 'Belum Ada' },
+      { id: 8, name: 'Fotokopi KK Seluruh Ahli Waris', desc: 'KK seluruh ahli waris', status: 'Belum Ada' },
       { id: 9, name: 'Nomor Telepon dan Email Penerima APHB', desc: 'Kontak penerima APHB', status: 'Sudah Diterima' },
-      { id: 10, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi PBB tahun berjalan', status: 'Belum Diunggah' },
+      { id: 10, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi PBB tahun berjalan', status: 'Belum Ada' },
       { id: 11, name: 'Share Lokasi Tanah', desc: 'Share lokasi tanah/objek APHB', status: 'Sudah Diterima' },
-      { id: 12, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto objek APHB dari kamera GPS', status: 'Belum Diunggah' }
+      { id: 12, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto objek APHB dari kamera GPS', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'APHT') {
     return [
       { id: 1, name: 'Sertifikat Asli', desc: 'Sertifikat tanah asli HM/HGB/HP', status: 'Sudah Diterima' },
       { id: 2, name: 'KTP Pemegang Hak', desc: 'Valid E-KTP photocopy or scan of owner', status: 'Sudah Diterima' },
-      { id: 3, name: 'KTP Persetujuan Pemegang Hak', desc: 'Required for married individuals', status: 'Belum Diunggah' },
+      { id: 3, name: 'KTP Persetujuan Pemegang Hak', desc: 'Required for married individuals', status: 'Belum Ada' },
       { id: 4, name: 'Fotokopi KK', desc: 'Family Registry card', status: 'Sudah Diterima' },
       { id: 5, name: 'Fotokopi Surat Nikah', desc: 'Marriage certificate', status: 'Sudah Diterima' },
-      { id: 6, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Latest property tax receipt', status: 'Belum Diunggah' },
+      { id: 6, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Latest property tax receipt', status: 'Belum Ada' },
       { id: 7, name: 'Fotokopi Perjanjian Kredit', desc: 'Credit agreement from bank', status: 'Sudah Diterima' },
-      { id: 8, name: 'Fotokopi KTP Pihak Bank', desc: 'Bank officer representative ID', status: 'Belum Diunggah' },
-      { id: 9, name: 'Fotokopi SK Pihak Bank', desc: 'Officer\'s letter of appointment', status: 'Belum Diunggah' },
+      { id: 8, name: 'Fotokopi KTP Pihak Bank', desc: 'Bank officer representative ID', status: 'Belum Ada' },
+      { id: 9, name: 'Fotokopi SK Pihak Bank', desc: 'Officer\'s letter of appointment', status: 'Belum Ada' },
       { id: 10, name: 'Kode Bank', desc: 'Unique bank code identifier', status: 'Sudah Diterima' }
     ];
   }
@@ -86,17 +86,17 @@ const getRawDefaultChecklist = (serviceType) => {
     return [
       { id: 1, name: 'Sertifikat Asli', desc: 'Sertifikat tanah asli HM/HGB/HP', status: 'Sudah Diterima' },
       { id: 2, name: 'Surat Keterangan Ahli Waris Asli', desc: 'Surat keterangan ahli waris asli', status: 'Sudah Diterima' },
-      { id: 3, name: 'Fotokopi Legalisir Kepala Desa untuk surat ahli waris', desc: 'Fotokopi legalisir Kades untuk surat keterangan ahli waris', status: 'Belum Diunggah' },
+      { id: 3, name: 'Fotokopi Legalisir Kepala Desa untuk surat ahli waris', desc: 'Fotokopi legalisir Kades untuk surat keterangan ahli waris', status: 'Belum Ada' },
       { id: 4, name: 'Fotokopi Surat/Akta Kematian', desc: 'Fotokopi surat/akta kematian pewaris', status: 'Sudah Diterima' },
       { id: 5, name: 'Surat Nikah atau Surat Keterangan Nikah dari desa (alm)', desc: 'Surat nikah alm atau surat keterangan nikah desa', status: 'Sudah Diterima' },
-      { id: 6, name: 'Surat Keterangan Anak dari Desa', desc: 'Surat keterangan anak/silsilah waris', status: 'Belum Diunggah' },
-      { id: 7, name: 'Fotokopi KTP Seluruh Ahli Waris', desc: 'KTP seluruh ahli waris', status: 'Belum Diunggah' },
-      { id: 8, name: 'Surat Pernyataan Pembagian Hak Waris', desc: 'Surat pernyataan pembagian hak waris ahli waris', status: 'Belum Diunggah' },
-      { id: 9, name: 'Fotokopi KK Seluruh Ahli Waris', desc: 'KK seluruh ahli waris', status: 'Belum Diunggah' },
+      { id: 6, name: 'Surat Keterangan Anak dari Desa', desc: 'Surat keterangan anak/silsilah waris', status: 'Belum Ada' },
+      { id: 7, name: 'Fotokopi KTP Seluruh Ahli Waris', desc: 'KTP seluruh ahli waris', status: 'Belum Ada' },
+      { id: 8, name: 'Surat Pernyataan Pembagian Hak Waris', desc: 'Surat pernyataan pembagian hak waris ahli waris', status: 'Belum Ada' },
+      { id: 9, name: 'Fotokopi KK Seluruh Ahli Waris', desc: 'KK seluruh ahli waris', status: 'Belum Ada' },
       { id: 10, name: 'Nomor Telepon dan Email Salah Satu Ahli Waris', desc: 'Kontak salah satu ahli waris', status: 'Sudah Diterima' },
-      { id: 11, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi PBB tahun berjalan', status: 'Belum Diunggah' },
+      { id: 11, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi PBB tahun berjalan', status: 'Belum Ada' },
       { id: 12, name: 'Share Lokasi Tanah', desc: 'Share lokasi tanah/objek waris', status: 'Sudah Diterima' },
-      { id: 13, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto objek waris dari kamera GPS', status: 'Belum Diunggah' }
+      { id: 13, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto objek waris dari kamera GPS', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'ROYA') {
@@ -107,7 +107,7 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 4, name: 'Surat Roya Asli dari Bank', desc: 'Surat roya asli dari bank kreditur', status: 'Sudah Diterima' },
       { id: 5, name: 'Sertifikat Hak Tanggungan Asli', desc: 'Sertifikat Hak Tanggungan asli', status: 'Sudah Diterima' },
       { id: 6, name: 'Share Lokasi Tanah', desc: 'Share lokasi tanah/objek roya', status: 'Sudah Diterima' },
-      { id: 7, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto objek roya dari kamera GPS', status: 'Belum Diunggah' }
+      { id: 7, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto objek roya dari kamera GPS', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'PECAH') {
@@ -115,9 +115,9 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 1, name: 'Sertifikat Asli', desc: 'Sertifikat asli (HM/HGB/HP) dari BPN', status: 'Sudah Diterima' },
       { id: 2, name: 'Fotokopi KTP Pemegang Hak', desc: 'Fotokopi KTP pemegang hak milik', status: 'Sudah Diterima' },
       { id: 3, name: 'Fotokopi KK Pemegang Hak', desc: 'Fotokopi Kartu Keluarga pemegang hak milik', status: 'Sudah Diterima' },
-      { id: 4, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Diunggah' },
+      { id: 4, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Ada' },
       { id: 5, name: 'Share Lokasi Tanah', desc: 'Titik koordinat share lokasi tanah objek pemecahan', status: 'Sudah Diterima' },
-      { id: 6, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto lokasi tanah fisik menggunakan kamera GPS Maps', status: 'Belum Diunggah' }
+      { id: 6, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto lokasi tanah fisik menggunakan kamera GPS Maps', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'GANTI') {
@@ -125,9 +125,9 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 1, name: 'Sertifikat Asli', desc: 'Sertifikat asli (HM/HGB/HP) dari BPN', status: 'Sudah Diterima' },
       { id: 2, name: 'Fotokopi KTP Pemegang Hak', desc: 'Fotokopi KTP pemegang hak milik', status: 'Sudah Diterima' },
       { id: 3, name: 'Fotokopi KK Pemegang Hak', desc: 'Fotokopi Kartu Keluarga pemegang hak milik', status: 'Sudah Diterima' },
-      { id: 4, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Diunggah' },
+      { id: 4, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Ada' },
       { id: 5, name: 'Share Lokasi Tanah', desc: 'Titik koordinat share lokasi tanah objek pengganti', status: 'Sudah Diterima' },
-      { id: 6, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto lokasi tanah fisik menggunakan kamera GPS Maps', status: 'Belum Diunggah' }
+      { id: 6, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto lokasi tanah fisik menggunakan kamera GPS Maps', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'KONVERSI') {
@@ -135,12 +135,12 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 1, name: 'Fotokopi Legalisir Letter C Desa', desc: 'Fotokopi Letter C desa dilegalisir', status: 'Sudah Diterima' },
       { id: 2, name: 'Fotokopi KTP Pemegang Hak', desc: 'Fotokopi KTP pemegang hak milik', status: 'Sudah Diterima' },
       { id: 3, name: 'Fotokopi KK Pemegang Hak', desc: 'Fotokopi Kartu Keluarga pemegang hak milik', status: 'Sudah Diterima' },
-      { id: 4, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Diunggah' },
+      { id: 4, name: 'Fotokopi PBB Tahun Berjalan', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Ada' },
       { id: 5, name: 'Share Lokasi Tanah', desc: 'Titik koordinat share lokasi tanah objek', status: 'Sudah Diterima' },
-      { id: 6, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto lokasi tanah fisik menggunakan kamera GPS Maps', status: 'Belum Diunggah' },
+      { id: 6, name: 'Foto Lokasi Tanah (GPS Maps Camera)', desc: 'Foto lokasi tanah fisik menggunakan kamera GPS Maps', status: 'Belum Ada' },
       { id: 7, name: 'Blangko Konversi', desc: 'Formulir blangko konversi resmi', status: 'Sudah Diterima' },
-      { id: 8, name: 'Fotokopi KTP Carik/Lurah/Polo', desc: 'Fotokopi KTP pejabat desa Carik/Lurah/Polo', status: 'Belum Diunggah' },
-      { id: 9, name: 'Surat Keterangan Riwayat Tanah', desc: 'Surat keterangan riwayat kepemilikan tanah asli', status: 'Belum Diunggah' },
+      { id: 8, name: 'Fotokopi KTP Carik/Lurah/Polo', desc: 'Fotokopi KTP pejabat desa Carik/Lurah/Polo', status: 'Belum Ada' },
+      { id: 9, name: 'Surat Keterangan Riwayat Tanah', desc: 'Surat keterangan riwayat kepemilikan tanah asli', status: 'Belum Ada' },
       { id: 10, name: 'Fotokopi Bukti Perolehan Hak Letter C Sejak Tahun 1960', desc: 'Fotokopi bukti perolehan hak Letter C runut sejak tahun 1960', status: 'Sudah Diterima' }
     ];
   }
@@ -149,14 +149,14 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 1, name: 'FOTOKOPI BPKB KENDARAAN BERMOTOR', desc: 'Fotokopi Bukti Pemilik Kendaraan Bermotor', status: 'Sudah Diterima' },
       { id: 2, name: 'FOTOKOPI STNK KENDARAAN BERMOTOR', desc: 'Fotokopi Surat Tanda Nomor Kendaraan', status: 'Sudah Diterima' },
       { id: 3, name: 'KTP DEBITUR', desc: 'Kartu Tanda Penduduk pihak Debitur', status: 'Sudah Diterima' },
-      { id: 4, name: 'KTP PERSETUJUAN DEBITUR', desc: 'Fotokopi KTP penjamin persetujuan debitur', status: 'Belum Diunggah' },
+      { id: 4, name: 'KTP PERSETUJUAN DEBITUR', desc: 'Fotokopi KTP penjamin persetujuan debitur', status: 'Belum Ada' },
       { id: 5, name: 'FOTOKOPI KARTU KELUARGA', desc: 'Fotokopi Kartu Keluarga debitur', status: 'Sudah Diterima' },
       { id: 6, name: 'FOTOKOPI SURAT NIKAH', desc: 'Fotokopi Surat Nikah/Buku Nikah debitur', status: 'Sudah Diterima' },
       { id: 7, name: 'FOTOKOPI PERJANJIAN KREDIT', desc: 'Fotokopi Perjanjian Kredit pendukung', status: 'Sudah Diterima' },
-      { id: 8, name: 'FOTOKOPI KWITANSI PEMBELIAN KENDARAAN', desc: 'Diperlukan apabila BPKB + STNK bukan atas nama debitur', status: 'Belum Diunggah' },
-      { id: 9, name: 'SURAT PERNYATAAN KEPEMILIKAN JAMINAN', desc: 'Diperlukan apabila BPKB + STNK bukan atas nama debitur', status: 'Belum Diunggah' },
-      { id: 10, name: 'FOTOKOPI KTP PIHAK BANK', desc: 'ID perwakilan pejabat bank', status: 'Belum Diunggah' },
-      { id: 11, name: 'FOTOKOPI SK PIHAK BANK', desc: 'Surat Keputusan perwakilan pejabat bank', status: 'Belum Diunggah' }
+      { id: 8, name: 'FOTOKOPI KWITANSI PEMBELIAN KENDARAAN', desc: 'Diperlukan apabila BPKB + STNK bukan atas nama debitur', status: 'Belum Ada' },
+      { id: 9, name: 'SURAT PERNYATAAN KEPEMILIKAN JAMINAN', desc: 'Diperlukan apabila BPKB + STNK bukan atas nama debitur', status: 'Belum Ada' },
+      { id: 10, name: 'FOTOKOPI KTP PIHAK BANK', desc: 'ID perwakilan pejabat bank', status: 'Belum Ada' },
+      { id: 11, name: 'FOTOKOPI SK PIHAK BANK', desc: 'Surat Keputusan perwakilan pejabat bank', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'APJB' || serviceType === 'APPJB') {
@@ -166,12 +166,12 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 3, name: 'KTP PERSETUJUAN PEMEGANG HAK', desc: 'Fotokopi KTP persetujuan suami/istri pemegang hak', status: 'Sudah Diterima' },
       { id: 4, name: 'FOTOKOPI KARTU KELUARGA', desc: 'Fotokopi Kartu Keluarga pemegang hak', status: 'Sudah Diterima' },
       { id: 5, name: 'FOTOKOPI SURAT NIKAH', desc: 'Fotokopi Surat Nikah pemegang hak', status: 'Sudah Diterima' },
-      { id: 6, name: 'FOTOKOPI PBB TAHUN BERJALAN', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Diunggah' },
+      { id: 6, name: 'FOTOKOPI PBB TAHUN BERJALAN', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Ada' },
       { id: 7, name: 'FOTOKOPI KTP PEMBELI', desc: 'Fotokopi Kartu Tanda Penduduk pihak pembeli', status: 'Sudah Diterima' },
       { id: 8, name: 'FOTOKOPI KARTU KELUARGA PEMBELI', desc: 'Fotokopi Kartu Keluarga pihak pembeli', status: 'Sudah Diterima' },
       { id: 9, name: 'NOMOR TELEPON + EMAIL PEMBELI', desc: 'Nomor telepon dan email aktif pembeli', status: 'Sudah Diterima' },
       { id: 10, name: 'SHARELOKASI TANAH', desc: 'Titik koordinat share lokasi tanah objek', status: 'Sudah Diterima' },
-      { id: 11, name: 'FOTO LOKASI', desc: 'Foto fisik lokasi tanah objek', status: 'Belum Diunggah' }
+      { id: 11, name: 'FOTO LOKASI', desc: 'Foto fisik lokasi tanah objek', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'SKUM' || serviceType === 'APK') {
@@ -191,7 +191,7 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 5, name: 'FOTOKOPI SURAT NIKAH', desc: 'Fotokopi Surat Nikah pemegang hak', status: 'Sudah Diterima' },
       { id: 6, name: 'FOTOKOPI KTP PIHAK PENYEWA', desc: 'Fotokopi Kartu Tanda Penduduk pihak penyewa', status: 'Sudah Diterima' },
       { id: 7, name: 'FOTOKOPI KARTU KELUARGA PIHAK PENYEWA', desc: 'Fotokopi Kartu Keluarga pihak penyewa', status: 'Sudah Diterima' },
-      { id: 8, name: 'FOTOKOPI PBB TAHUN BERJALAN', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Diunggah' }
+      { id: 8, name: 'FOTOKOPI PBB TAHUN BERJALAN', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'CONSEN') {
@@ -205,7 +205,7 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 7, name: 'SURAT KEHILANGAN DARI DESA', desc: 'Surat keterangan kehilangan resmi dari kantor kepala desa', status: 'Sudah Diterima' },
       { id: 8, name: 'SURAT KEHILANGAN DARI POLRES SESUAI DOMISILI OBYEK', desc: 'Surat tanda lapor kehilangan dari Kepolisian Resor', status: 'Sudah Diterima' },
       { id: 9, name: 'PENGANTAR ROYA DARI BANK', desc: 'Surat pengantar roya resmi asli dari bank kreditur', status: 'Sudah Diterima' },
-      { id: 10, name: 'FOTOKOPI PBB TAHUN BERJALAN', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Diunggah' }
+      { id: 10, name: 'FOTOKOPI PBB TAHUN BERJALAN', desc: 'Fotokopi Pajak Bumi dan Bangunan tahun berjalan', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'YAYASAN') {
@@ -213,12 +213,12 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 1, name: 'FOTOKOPI KTP SELURUH ANGGOTA', desc: 'Fotokopi KTP pendiri, pembina, pengurus, dan pengawas yayasan', status: 'Sudah Diterima' },
       { id: 2, name: 'FOTOKOPI KARTU KELUARGA SELURUH ANGGOTA', desc: 'Fotokopi Kartu Keluarga seluruh pendiri/pengurus', status: 'Sudah Diterima' },
       { id: 3, name: 'SUSUNAN/DAFTAR PENGURUS', desc: 'Susunan Pengurus (Ketua Pembina, Anggota, Ketua Pengurus, Sekretaris, Bendahara, Ketua Pengawas, Anggota)', status: 'Sudah Diterima' },
-      { id: 4, name: 'SURAT KETERANGAN DOMISILI (DIBUAT SETELAH AKTA JADI)', desc: 'Surat keterangan domisili yayasan dari kelurahan setempat', status: 'Belum Diunggah' },
+      { id: 4, name: 'SURAT KETERANGAN DOMISILI (DIBUAT SETELAH AKTA JADI)', desc: 'Surat keterangan domisili yayasan dari kelurahan setempat', status: 'Belum Ada' },
       { id: 5, name: 'FOTOKOPI NPWP PRIBADI MASING MASING PENGURUS', desc: 'Fotokopi Kartu NPWP masing-masing pengurus aktif', status: 'Sudah Diterima' },
       { id: 6, name: 'BERGERAK DALAM BIDANG APA YAYASAN TERSEBUT', desc: 'Penjelasan bidang kegiatan yayasan (Sosial, Keagamaan, Kemanusiaan)', status: 'Sudah Diterima' },
       { id: 7, name: 'NAMA YAYASAN (TERDIRI DARI 3 KATA DAN TIDAK BOLEH SINGKATAN SERTA EJAAN)', desc: 'Pengecekan nama yayasan minimal 3 kata tanpa singkatan', status: 'Sudah Diterima' },
-      { id: 8, name: 'FOTOKOPI NPWP YAYASAN', desc: 'Fotokopi NPWP atas nama yayasan yang telah terdaftar', status: 'Belum Diunggah' },
-      { id: 9, name: 'FOTOKOPI BUKU TABUNGAN AN. YAYASAN', desc: 'Fotokopi buku rekening bank atas nama yayasan', status: 'Belum Diunggah' }
+      { id: 8, name: 'FOTOKOPI NPWP YAYASAN', desc: 'Fotokopi NPWP atas nama yayasan yang telah terdaftar', status: 'Belum Ada' },
+      { id: 9, name: 'FOTOKOPI BUKU TABUNGAN AN. YAYASAN', desc: 'Fotokopi buku rekening bank atas nama yayasan', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'PT') {
@@ -234,9 +234,9 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 9, name: 'NAMA PT. (TERDIRI DARI 3 KATA)', desc: 'Pengecekan nama PT minimal 3 kata bahasa Indonesia resmi', status: 'Sudah Diterima' },
       { id: 10, name: 'ALAMAT LENGKAP PT', desc: 'Alamat lengkap kedudukan dan kantor PT', status: 'Sudah Diterima' },
       { id: 11, name: 'KEGIATAN USAHA (SESUAI KBLI 2021)', desc: 'Penentuan kode bidang usaha sesuai Klasifikasi Baku Lapangan Usaha Indonesia 2021', status: 'Sudah Diterima' },
-      { id: 12, name: 'FOTOKOPI NPWP PT', desc: 'Fotokopi Nomor Pokok Wajib Pajak atas nama perseroan', status: 'Belum Diunggah' },
-      { id: 13, name: 'FOTOKOPI BUKU SETOR MODAL (BUKU TABUNGAN, REKENING KORAN, BUKTI TRANSFER KE REKENING AN. PERSERO)', desc: 'Bukti penyetoran modal ke rekening koran atas nama PT', status: 'Belum Diunggah' },
-      { id: 14, name: 'SURAT KETERANGAN DOMISILI DARI DESA (SETELAH AKTA JADI)', desc: 'Surat keterangan domisili PT dari pemerintah desa setempat', status: 'Belum Diunggah' }
+      { id: 12, name: 'FOTOKOPI NPWP PT', desc: 'Fotokopi Nomor Pokok Wajib Pajak atas nama perseroan', status: 'Belum Ada' },
+      { id: 13, name: 'FOTOKOPI BUKU SETOR MODAL (BUKU TABUNGAN, REKENING KORAN, BUKTI TRANSFER KE REKENING AN. PERSERO)', desc: 'Bukti penyetoran modal ke rekening koran atas nama PT', status: 'Belum Ada' },
+      { id: 14, name: 'SURAT KETERANGAN DOMISILI DARI DESA (SETELAH AKTA JADI)', desc: 'Surat keterangan domisili PT dari pemerintah desa setempat', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'CV') {
@@ -250,27 +250,27 @@ const getRawDefaultChecklist = (serviceType) => {
       { id: 7, name: 'MODAL AWAL USAHA', desc: 'Detail nominal modal awal usaha CV', status: 'Sudah Diterima' },
       { id: 8, name: 'KONTRIBUSI MODAL MASING PERSERO', desc: 'Detail kontribusi modal masing-masing sekutu/persero', status: 'Sudah Diterima' },
       { id: 9, name: 'KEGIATAN USAHA (SESUAI KBLI 2021 DI GOOGLE)', desc: 'Klasifikasi Baku Lapangan Usaha Indonesia CV', status: 'Sudah Diterima' },
-      { id: 10, name: 'SURAT KETERANGAN DOMISILI (SETELAH AKTA JADI)', desc: 'Surat keterangan domisili CV setelah akta terbit', status: 'Belum Diunggah' },
-      { id: 11, name: 'FOTOKOPI NPWP CV', desc: 'Fotokopi Nomor Pokok Wajib Pajak atas nama CV', status: 'Belum Diunggah' }
+      { id: 10, name: 'SURAT KETERANGAN DOMISILI (SETELAH AKTA JADI)', desc: 'Surat keterangan domisili CV setelah akta terbit', status: 'Belum Ada' },
+      { id: 11, name: 'FOTOKOPI NPWP CV', desc: 'Fotokopi Nomor Pokok Wajib Pajak atas nama CV', status: 'Belum Ada' }
     ];
   }
   if (serviceType === 'HT') {
     return [
       { id: 1, name: 'SERTIFIKAT TANAH ASLI', desc: 'Sertifikat asli (HM/HGB) dari BPN', status: 'Sudah Diterima' },
       { id: 2, name: 'SURAT KUASA MEMBEBANKAN HAK TANGGUNGAN', desc: 'SKMHT pendukung asli', status: 'Sudah Diterima' },
-      { id: 3, name: 'KTP PEMBERI & PENERIMA HAK', desc: 'Valid photocopy or scan of IDs', status: 'Belum Diunggah' },
+      { id: 3, name: 'KTP PEMBERI & PENERIMA HAK', desc: 'Valid photocopy or scan of IDs', status: 'Belum Ada' },
       { id: 4, name: 'FOTOKOPI KARTU KELUARGA', desc: 'Family Registry card', status: 'Sudah Diterima' },
       { id: 5, name: 'PERJANJIAN KREDIT ASLI & SALINAN', desc: 'Credit agreement from bank', status: 'Perlu Verifikasi' },
       { id: 6, name: 'BUKTI VALIDASI PBB', desc: 'Latest property tax receipt', status: 'Sudah Diterima' },
-      { id: 7, name: 'SURAT PERNYATAAN PEMASANGAN APHT', desc: 'Required statement form', status: 'Belum Diunggah' },
-      { id: 8, name: 'DOKUMEN PENDUKUNG LAINNYA', desc: 'Other required attachments', status: 'Belum Diunggah' },
+      { id: 7, name: 'SURAT PERNYATAAN PEMASANGAN APHT', desc: 'Required statement form', status: 'Belum Ada' },
+      { id: 8, name: 'DOKUMEN PENDUKUNG LAINNYA', desc: 'Other required attachments', status: 'Belum Ada' },
     ];
   }
   return [
     { id: 1, name: 'KTP PEMOHON UTAMA', desc: 'Kartu Tanda Penduduk pemohon', status: 'Sudah Diterima' },
     { id: 2, name: 'FOTOKOPI KARTU KELUARGA', desc: 'Fotokopi KK pemohon', status: 'Sudah Diterima' },
     { id: 3, name: 'NPWP PEMOHON', desc: 'Nomor Pokok Wajib Pajak', status: 'Perlu Verifikasi' },
-    { id: 4, name: 'DOKUMEN PENDUKUNG', desc: 'Dokumen pendukung lainnya', status: 'Belum Diunggah' },
+    { id: 4, name: 'DOKUMEN PENDUKUNG', desc: 'Dokumen pendukung lainnya', status: 'Belum Ada' },
   ];
 };
 
@@ -278,7 +278,7 @@ export const getDefaultChecklist = (serviceType) => {
   const list = getRawDefaultChecklist(serviceType);
   return list.map(item => ({
     ...item,
-    status: 'Belum Diunggah',
+    status: 'Belum Ada',
     fileName: null,
     fileUrl: null
   }));
@@ -537,7 +537,7 @@ export const CasesProvider = ({ children }) => {
             order_num: t.order_num,
             name: t.name,
             description: t.description,
-            status: userInputItem ? userInputItem.status : 'Belum Diunggah',
+            status: userInputItem ? userInputItem.status : 'Belum Ada',
             file_name: userInputItem ? (userInputItem.fileName || null) : null,
             file_url: userInputItem ? (userInputItem.fileUrl || null) : null
           };
