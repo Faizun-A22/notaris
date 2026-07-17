@@ -303,7 +303,7 @@ export const StaffDocumentsPage = () => {
               const isSelected = selectedCase?.id === c.id;
 
               const chList = c.checklist || getDefaultChecklist(c.serviceType) || [];
-              const missingCount = chList.filter(item => item.status === 'Belum Ada').length;
+              const missingCount = chList.filter(item => item.status === 'Belum Diunggah').length;
 
               return (
                 <div
