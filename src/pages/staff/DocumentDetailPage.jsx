@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 import { useCases } from '../../hooks/useCases';
 import { formatDate } from '../../utils/formatDate';
+import { uploadDocumentFile } from '../../lib/storage';
 
 const formatNumberWithDots = (num) => {
   if (num === undefined || num === null || num === '') return '';
@@ -122,6 +123,7 @@ export const DocumentDetailPage = () => {
   const [selectedDocForPreview, setSelectedDocForPreview] = useState(null);
   const [selectedDocForUpload, setSelectedDocForUpload] = useState(null);
   const [uploadFile, setUploadFile] = useState(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [selectedDocForReview, setSelectedDocForReview] = useState(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -1894,25 +1896,48 @@ export const DocumentDetailPage = () => {
                    Batal
                  </button>
                  <button
-                   disabled={!uploadFile}
-                   onClick={() => {
-                     if (!uploadFile) return;
-                     const fileData = {
-                       name: uploadFile.name,
-                       url: URL.createObjectURL(uploadFile)
-                     };
-                     handleUpdateChecklistStatus(selectedDocForUpload.id, 'Perlu Verifikasi', fileData);
-                     setSelectedDocForUpload(null);
-                   }}
-                   className={`flex-1 py-2 rounded-lg text-[13px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
-                     uploadFile 
-                       ? 'bg-primary text-on-primary hover:opacity-90 cursor-pointer shadow-sm' 
-                       : 'bg-surface-container-high text-on-surface-variant/40 cursor-not-allowed'
-                   }`}
-                 >
-                   <span className="material-symbols-outlined text-[16px]">publish</span>
-                   Unggah Dokumen
-                 </button>
+                    disabled={!uploadFile || isUploadingFile}
+                    onClick={async () => {
+                      if (!uploadFile) return;
+                      setIsUploadingFile(true);
+                      try {
+                        const uploadRes = await uploadDocumentFile(
+                          uploadFile, 
+                          activeCase.id, 
+                          selectedDocForUpload.name
+                        );
+                        const fileData = {
+                          name: uploadRes.name || uploadFile.name,
+                          url: uploadRes.url
+                        };
+                        handleUpdateChecklistStatus(selectedDocForUpload.id, 'Perlu Verifikasi', fileData);
+                        toast.success('Dokumen fisik berhasil diunggah!');
+                        setSelectedDocForUpload(null);
+                      } catch (err) {
+                        console.error(err);
+                        toast.error('Gagal mengunggah dokumen: ' + err.message);
+                      } finally {
+                        setIsUploadingFile(false);
+                      }
+                    }}
+                    className={`flex-1 py-2 rounded-lg text-[13px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
+                      uploadFile && !isUploadingFile
+                        ? 'bg-primary text-on-primary hover:opacity-90 cursor-pointer shadow-sm' 
+                        : 'bg-surface-container-high text-on-surface-variant/40 cursor-not-allowed'
+                    }`}
+                  >
+                    {isUploadingFile ? (
+                      <>
+                        <span className="material-symbols-outlined animate-spin text-[16px]">sync</span>
+                        Mengunggah...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-[16px]">publish</span>
+                        Unggah Dokumen
+                      </>
+                    )}
+                  </button>
                </div>
             </div>
           </div>

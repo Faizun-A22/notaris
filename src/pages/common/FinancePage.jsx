@@ -140,8 +140,12 @@ export const FinancePage = () => {
       toast.error('Total biaya tidak boleh negatif!');
       return;
     }
-    if (editPaidAmount < 0 || editPaidAmount > editFees) {
-      toast.error('Nominal dibayar tidak valid!');
+    if (editPaidAmount < 0) {
+      toast.error('Nominal dibayar tidak boleh negatif!');
+      return;
+    }
+    if (editFees > 0 && editPaidAmount > editFees) {
+      toast.error('Nominal dibayar tidak boleh melebihi total biaya akta!');
       return;
     }
 

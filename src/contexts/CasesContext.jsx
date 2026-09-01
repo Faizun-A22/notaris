@@ -462,8 +462,36 @@ export const CasesProvider = ({ children }) => {
   // A. Tambah Berkas Baru
   const addCase = async (caseData) => {
     if (user) {
-      const nextIndex = cases.length + 1;
-      const caseNumber = generateCaseNumber(nextIndex);
+      // Hitung nomor berkas berdasarkan bulan berjalan dan data database terbaru
+      const targetDate = caseData.entryDate ? new Date(caseData.entryDate) : new Date();
+      const yr = targetDate.getFullYear();
+      const mo = String(targetDate.getMonth() + 1).padStart(2, '0');
+      const prefix = `${yr}/${mo}/`;
+
+      let nextIndex = 1;
+      try {
+        const { data: existingPrefixCases } = await supabase
+          .from('cases')
+          .select('case_number')
+          .ilike('case_number', `${prefix}%`)
+          .order('case_number', { ascending: false })
+          .limit(1);
+
+        if (existingPrefixCases && existingPrefixCases.length > 0) {
+          const parts = existingPrefixCases[0].case_number.split('/');
+          if (parts.length >= 3) {
+            const lastSeq = parseInt(parts[2], 10);
+            if (!isNaN(lastSeq)) {
+              nextIndex = lastSeq + 1;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Fallback case index computation:', err);
+        nextIndex = cases.length + 1;
+      }
+
+      const caseNumber = generateCaseNumber(nextIndex, targetDate);
       
       let clientId = caseData.clientId;
       if (!clientId) {

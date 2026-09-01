@@ -124,35 +124,54 @@ export const OwnerStaffManagement = () => {
 
     setSubmitting(true);
     try {
-      if (!supabaseAdmin) {
-        throw new Error('Supabase Admin client belum terkonfigurasi. Masukkan VITE_SUPABASE_SERVICE_ROLE_KEY di file .env.');
-      }
-
-      // 1. Buat User di Supabase Auth
-      const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true
-      });
-
-      if (authError) throw authError;
-
-      // 2. Buat Profil di public.profiles
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          id: userData.user.id,
-          full_name: name,
-          role: 'staff',
-          title: role,
-          email: email,
-          is_active: true
+      if (supabaseAdmin) {
+        // 1. Buat User di Supabase Auth via Admin
+        const { data: userData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: name, role: 'staff', title: role }
         });
 
-      if (profileError) {
-        // Rollback / hapus user auth jika profil gagal dibuat
-        await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
-        throw profileError;
+        if (authError) throw authError;
+
+        // 2. Buat Profil di public.profiles
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .insert({
+            id: userData.user.id,
+            full_name: name,
+            role: 'staff',
+            title: role,
+            email: email,
+            is_active: true
+          });
+
+        if (profileError) {
+          await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
+          throw profileError;
+        }
+      } else {
+        // Fallback: Signup via standard client
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: name, role: 'staff', title: role }
+          }
+        });
+        if (authError) throw authError;
+
+        if (authData?.user) {
+          await supabase.from('profiles').upsert({
+            id: authData.user.id,
+            full_name: name,
+            role: 'staff',
+            title: role,
+            email: email,
+            is_active: true
+          });
+        }
       }
 
       toast.success(`Staf ${name} berhasil ditambahkan!`);
@@ -172,33 +191,48 @@ export const OwnerStaffManagement = () => {
   const handleDeleteStaff = async (id) => {
     setDeletingId(id);
     try {
-      if (!supabaseAdmin) {
-        throw new Error('Supabase Admin client belum terkonfigurasi.');
-      }
-      
-      // Coba hapus dari Supabase Auth
-      const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
-      
-      if (error) {
-        const isConstraintErr = 
-          error.message?.toLowerCase().includes('foreign key') || 
-          error.message?.toLowerCase().includes('violates') ||
-          error.message?.toLowerCase().includes('constraint');
+      if (supabaseAdmin) {
+        // Coba hapus dari Supabase Auth
+        const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+        
+        if (error) {
+          const isConstraintErr = 
+            error.message?.toLowerCase().includes('foreign key') || 
+            error.message?.toLowerCase().includes('violates') ||
+            error.message?.toLowerCase().includes('constraint');
 
-        if (isConstraintErr) {
-          // Fallback: Nonaktifkan staf di tabel profiles
+          if (isConstraintErr) {
+            // Fallback: Nonaktifkan staf di tabel profiles
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ is_active: false })
+              .eq('id', id);
+
+            if (updateError) throw updateError;
+            toast.success('Staf tidak dapat dihapus karena memiliki riwayat berkas/log, akun berhasil dinonaktifkan.');
+          } else {
+            throw error;
+          }
+        } else {
+          toast.success('Staf berhasil dihapus secara permanen!');
+        }
+      } else {
+        // Fallback standard client: Hapus dari tabel profiles atau nonaktifkan
+        const { error: delError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', id);
+
+        if (delError) {
           const { error: updateError } = await supabase
             .from('profiles')
             .update({ is_active: false })
             .eq('id', id);
-
           if (updateError) throw updateError;
-          toast.success('Staf tidak dapat dihapus karena memiliki riwayat berkas/log, akun berhasil dinonaktifkan.');
+          toast.success('Akun staf berhasil dinonaktifkan.');
         } else {
-          throw error;
+          toast.success('Profil staf berhasil dihapus.');
         }
-      } else {
-        toast.success('Staf berhasil dihapus secara permanen!');
       }
 
       if (selectedStaff?.id === id) setSelectedStaff(null);

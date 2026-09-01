@@ -8,9 +8,8 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tentukan role berdasarkan path URL (/login/owner rahasia)
   const isOwnerPath = location.pathname === '/login/owner';
-  const selectedRole = isOwnerPath ? ROLES.OWNER : ROLES.STAFF;
+  const [activeRole, setActiveRole] = useState(isOwnerPath ? ROLES.OWNER : ROLES.STAFF);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,12 +18,21 @@ export const LoginPage = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Bersihkan form & error jika path berubah
+  // Bersihkan form & error jika role / path berubah
   useEffect(() => {
     setEmail('');
     setPassword('');
     setErrorMsg('');
-  }, [location.pathname]);
+  }, [activeRole, location.pathname]);
+
+  const handleRoleSwitch = (role) => {
+    setActiveRole(role);
+    if (role === ROLES.OWNER) {
+      navigate('/login/owner', { replace: true });
+    } else {
+      navigate('/login', { replace: true });
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,7 +42,7 @@ export const LoginPage = () => {
     setErrorMsg('');
 
     try {
-      if (selectedRole === ROLES.OWNER) {
+      if (activeRole === ROLES.OWNER) {
         const res = await loginAsOwner(email, password);
         if (res.success) {
           navigate('/owner/dashboard');
@@ -83,9 +91,37 @@ export const LoginPage = () => {
           {/* Aesthetic Gradient Top Edge */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-emerald-500 to-purple rounded-t-2xl" />
 
+          {/* Role Switcher Tabs */}
+          <div className="flex bg-slate-100 p-1 rounded-xl mb-6 border border-slate-200/60">
+            <button
+              type="button"
+              onClick={() => handleRoleSwitch(ROLES.STAFF)}
+              className={`flex-1 py-2 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center gap-1.5 ${
+                activeRole === ROLES.STAFF
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">badge</span>
+              <span>Portal Staf</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleRoleSwitch(ROLES.OWNER)}
+              className={`flex-1 py-2 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center gap-1.5 ${
+                activeRole === ROLES.OWNER
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">shield_person</span>
+              <span>Ketua Notaris</span>
+            </button>
+          </div>
+
           <div className="mb-6 text-center">
             <h2 className="text-lg font-bold text-slate-700">
-              {selectedRole === ROLES.OWNER ? 'Portal Ketua Notaris' : 'Portal Staf Administrasi'}
+              {activeRole === ROLES.OWNER ? 'Portal Ketua Notaris' : 'Portal Staf Administrasi'}
             </h2>
             <p className="text-xs text-muted mt-1">
               Silakan masukkan email dan kata sandi Anda untuk mengakses dashboard

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCases } from '../../hooks/useCases';
 import { getDefaultChecklist } from '../../contexts/CasesContext';
+import { uploadDocumentFile } from '../../lib/storage';
 import toast from 'react-hot-toast';
 
 const formatNumberWithDots = (num) => {
@@ -235,15 +236,12 @@ export const CreateDocumentPage = () => {
     setServiceType(serviceOptions[cat][0]);
   };
 
-  // Upload Simulation
-  const handleFileChange = (docId, e) => {
+  // Real Upload via Supabase Storage
+  const handleFileChange = async (docId, e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Initialize upload record
     const sizeStr = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
-    const isMockFail = file.size > 3 * 1024 * 1024; // size > 3MB triggers a mock failure first time for testing!
-    
     const uploadId = docId;
     
     setUploads(prev => ({
@@ -251,64 +249,70 @@ export const CreateDocumentPage = () => {
       [uploadId]: {
         name: file.name,
         size: sizeStr,
-        progress: 0,
+        progress: 40,
         status: 'uploading',
         previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-        rawFile: file,
-        isMockFail
+        rawFile: file
       }
     }));
 
-    simulateUploadProgress(uploadId, isMockFail);
-  };
-
-  const simulateUploadProgress = (uploadId, shouldFail) => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setUploads(prev => {
-        const item = prev[uploadId];
-        if (!item) {
-          clearInterval(interval);
-          return prev;
-        }
-
-        if (shouldFail && progress >= 60) {
-          clearInterval(interval);
-          return {
-            ...prev,
-            [uploadId]: { ...item, progress: 60, status: 'failed' }
-          };
-        }
-
-        if (progress >= 100) {
-          clearInterval(interval);
-          return {
-            ...prev,
-            [uploadId]: { ...item, progress: 100, status: 'success' }
-          };
-        }
-
-        return {
-          ...prev,
-          [uploadId]: { ...item, progress }
-        };
-      });
-    }, 150);
-  };
-
-  const handleRetryUpload = (docId) => {
-    setUploads(prev => {
-      const item = prev[docId];
-      if (!item) return prev;
-      
-      // Reset status and progress
-      simulateUploadProgress(docId, false); // Succeeded on retry
-      return {
+    try {
+      const uploadRes = await uploadDocumentFile(file, 'new_cases', file.name);
+      setUploads(prev => ({
         ...prev,
-        [docId]: { ...item, progress: 0, status: 'uploading' }
-      };
-    });
+        [uploadId]: {
+          name: uploadRes.name || file.name,
+          size: sizeStr,
+          progress: 100,
+          status: 'success',
+          url: uploadRes.url,
+          previewUrl: uploadRes.url,
+          rawFile: file
+        }
+      }));
+    } catch (err) {
+      console.error('File upload error:', err);
+      setUploads(prev => ({
+        ...prev,
+        [uploadId]: {
+          ...prev[uploadId],
+          progress: 100,
+          status: 'failed'
+        }
+      }));
+    }
+  };
+
+  const handleRetryUpload = async (docId) => {
+    const item = uploads[docId];
+    if (!item || !item.rawFile) return;
+
+    setUploads(prev => ({
+      ...prev,
+      [docId]: { ...prev[docId], progress: 40, status: 'uploading' }
+    }));
+
+    try {
+      const uploadRes = await uploadDocumentFile(item.rawFile, 'new_cases', item.name);
+      setUploads(prev => ({
+        ...prev,
+        [docId]: {
+          name: uploadRes.name || item.name,
+          size: item.size,
+          progress: 100,
+          status: 'success',
+          url: uploadRes.url,
+          previewUrl: uploadRes.url,
+          rawFile: item.rawFile
+        }
+      }));
+    } catch (err) {
+      console.error('Retry upload error:', err);
+      setUploads(prev => ({
+        ...prev,
+        [docId]: { ...prev[docId], progress: 100, status: 'failed' }
+      }));
+    }
   };
 
   const handleDeleteUpload = (docId) => {
@@ -412,7 +416,8 @@ export const CreateDocumentPage = () => {
             ...item,
             status: 'Perlu Verifikasi',
             fileName: fileRecord.name,
-            fileSize: fileRecord.size
+            fileSize: fileRecord.size,
+            fileUrl: fileRecord.url || fileRecord.previewUrl || null
           };
         }
         return item;
@@ -466,7 +471,8 @@ export const CreateDocumentPage = () => {
             ...item,
             status: 'Perlu Verifikasi', // Status becomes Perlu Verifikasi once uploaded
             fileName: fileRecord.name,
-            fileSize: fileRecord.size
+            fileSize: fileRecord.size,
+            fileUrl: fileRecord.url || fileRecord.previewUrl || null
           };
         }
         return item;
